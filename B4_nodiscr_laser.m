@@ -9,50 +9,28 @@ close all; clear variables; format compact;
 %% Important parameters to set up
 mouse_id = input('Mouse id\n:'); 
 
+% Set the number of trials
+tr_per_cond_max = 35; % total 6 conditions, n of trials x 10
 
 % Help the poor mousie
 freebie = 1; freebie_n = 0; freebie_max = 200; missed_till_freebie = 4;
-max_wrong = 4; 
+max_wrong = 2; 
+port_lr_move = 1;
 
-n_trials= 200; % 
+n_trials= 500; % 
 
-imaged_trials = 100;
-pre_tone_delay_dur=500; % in milliseconds
-response_dur = 2500; 
+pre_tone_delay_dur=2500; % in milliseconds
+response_dur = 2000; 
 reward_dur_ms = 5;
-% Load the calibrated valves data
-% load('reference_oscc4.mat');
-% load('valves_calibrated.mat');
 
 % Load & set the training stage data
-punish_antic=0;
 load(['os_data_figs/os' num2str(mouse_id) '/reference_oscc' num2str(mouse_id) '.mat']);
-
-wait_increment = 0;
-
-
-
-current_wait=0;
-
-choice_punish_time_out_dur =3000;
-
-% 
-% if mouse_id > 42
-%     mouse3rew = 1;
-%      disp("3 rew alternating");
-% else
-%     mouse3rew = 0;
-%     disp("random order");
-%     choice_punish_time_out_dur =10000;
-% end
-    
-wait_punish_time_out_dur = 800;
+choice_punish_time_out_dur = 0;
 
 max_tone_n = 2000;
 
 %% Initializing sounds
 sound_init;
-
 
 %% Time logging related variables
 left_lick_times = [];
@@ -66,45 +44,12 @@ free = ones(1,max_tone_n)*3;
 switch_max = 5;
 switch_cond = randi([1,switch_max],1,1);
 
-%% Monitor anticipatory licking
-anticip = [];
-lick_1st = 1;
-
 %% Set up raspberry pi
 rasp_init;
-% mypi = raspi('169.254.156.249', 'pi', 'raspberry');
-% load('reference_rasp.mat'); % file with all the pin numbers and values for servo open / close
-% % %  configure pins
-% 
-% configurePin(mypi,pin_sens_left,'DigitalInput');
-% configurePin(mypi,pin_sens_right,'DigitalInput');
-% configurePin(mypi,pin_valv_left,'DigitalOutput');
-% configurePin(mypi,pin_valv_right,'DigitalOutput');
-% configurePin(mypi,pin_ca_imaging,'DigitalOutput');
-% configurePin(mypi,pin_laser,'DigitalOutput');
-% serv = servo(mypi, pin_servo_water);
-% servo_las_L = servo(mypi, pin_servo_laser_L);
-% servo_las_R = servo(mypi, pin_servo_laser_R);
-
-
-
-%% Temporary - to test servos for lasers  COMMENT OUT LATER!!!!1!!!!!1!!!!!
-
-% for ept=1:10
-%     writePosition(servo_las_L,servo_las_open_L);
-%     writePosition(servo_las_R,servo_las_open_R);
-%     pause(3);
-%     writePosition(servo_las_L,servo_las_closed_L);
-%     writePosition(servo_las_R,servo_las_closed_R);
-%     pause(3);
-% end
-% writePosition(serv,servo_near);
 
 %% Set the order of conditions
-tr_per_cond_max = 20; % total 6 conditions, n of trials x 10
 
 permut_order = randperm(tr_per_cond_max*10);
-
 seq_laser = repmat([0 0 0 0 0 0 1 1 2 2], 1, tr_per_cond_max);
 seq_side =  repmat([1 -1], 1, tr_per_cond_max*5);
 seq_laser = seq_laser(permut_order);
@@ -126,10 +71,7 @@ sens_before_left = 0;
 sens_before_right = 0;
 
 %% Stats tracking variables
-% total_trials = [];
-
 tone_n=0;
-early_lick_trials_abs = ones(1,max_tone_n)*3; % 1 if early lick, 0 otherwise
 early_lick_trials_delay = ones(1,max_tone_n)*3;
 missed_trials = ones(1,max_tone_n)*3; % 1 if missed, 0 otherwise
 left_trial_correct = []; % 1 if correct, 0 if right is chosen instead of left
@@ -137,11 +79,6 @@ right_trial_correct = []; % otherwise
 choice_made = ones(1,max_tone_n);
 max_tr_missed = 15;
 too_many_tr_missed=0;
-
-%% Increment related variebles
-early_lick = [];
-last_10_missed=10; last_10_early_delay=10; last_10_early_abs=0;
-incr_stabil = 10;
 
 %% State related variables
 TONE = 1;
@@ -154,20 +91,30 @@ WAIT_PUNISHMENT_TIME_OUT = 7;
 CHOICE_PUNISHMENT_TIME_OUT = 8;
 FIRST_TRIAL = 9;
 REWARD_INTAKE = 10;
-WORKING_MEMORY = 11;
 
 state=FIRST_TRIAL;
 
 % Reward-related
 left=1; right=-1;
-current_cond=randi([1,2],1,1);
-current_cond = (current_cond-1.5)*2;
-cond_count=0;
 
 %% Ask about training info
 weight = input(['Mouse ' num2str(mouse_id) ' weight \n:']);
-pre_note = input("Anything special before the experiment? \n:");
+pre_note = input("Anything special before the experiment? \n:", "s");
 
+
+%% Stepper
+ardu = arduino('COM5','Uno','Libraries','Adafruit\MotorShieldV2');
+shield = addon(ardu,'Adafruit\MotorShieldV2');
+addrs = scanI2CBus(ardu,0);
+
+stepper_lr = stepper(shield,1,200);
+stepper_lr.RPM = 200;
+stepper_lr_steps = 100; % 
+stepped_left = 0; too_left = 2000; too_right = - 2000; % find out empiricaylly
+side_wrong_to_step = 5;
+
+port_move_back = zeros(1,max_tone_n);
+port_move_left = zeros(1,max_tone_n);
 
 %% Start the task
 n=0;
@@ -175,8 +122,9 @@ disp(['starting the task, time: ' datestr(now,'dd-mm-yyyy HH:MM:SS.FFF')]);
 % Start the task
 training_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-train_t_max = 80; too_long = 0;
-writeDigitalPin(mypi,pin_ca_imaging,1);
+
+too_long = 0;
+
 pre_tone_delay_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
 % Figure setup
@@ -199,7 +147,6 @@ writeDigitalPin(mypi,pin_valv_left,0);
 writeDigitalPin(mypi,pin_valv_left,0);
 
 
-
 if seq_laser(tone_n+1) == 0
     writePosition(servo_las_L,servo_las_closed_L);
     writePosition(servo_las_R,servo_las_closed_R);
@@ -215,29 +162,21 @@ elseif seq_laser(tone_n+1) == 2
 end
 
 
-
 % writePosition(serv,servo_away);
 while ( n < n_trials ) 
 
     %% Detect lick
     scr_detect_lick;
 
-   
     %% 1st trial to begin
     if state == FIRST_TRIAL
         time_now = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
 
-    % Set the laser open/close status depending on the trial type
-        
-
-
         % When delay is over, transition to sound and start the tone
         if milliseconds(time_now-pre_tone_delay_start)>=pre_tone_delay_dur
             state=TONE;
             tone_n=tone_n+1;
-       
-        
 
         % Blast the laser for Arch
         writeDigitalPin(mypi,pin_laser,1);
@@ -248,17 +187,12 @@ while ( n < n_trials )
 
         % Play the tone according to the condition
         current_cond=seq_side(tone_n);
-
-
         PsychPortAudio('Start', pa_ambig, 1, 0, 0);
         tone_start = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
         'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
         amb_tone_times(tone_n) = milliseconds(training_start-tone_start);
         tone_times(tone_n) = milliseconds(training_start-tone_start);
-            
-        
         end
-        
     end
     
 
@@ -300,25 +234,42 @@ while ( n < n_trials )
         % When delay is over, transition to sound and start the tone
         if milliseconds(time_now-pre_tone_delay_start)>=pre_tone_delay_dur+randi(1000)
             state=TONE;
-            lick_1st = 1;
             
+            left_trial_correct_nonan = left_trial_correct (~isnan(left_trial_correct));
+            right_trial_correct_nonan = right_trial_correct (~isnan(right_trial_correct));
+            % Move the ports to the left / right if there are X wrong side
+            %choices in a row
+            if port_lr_move && length(left_trial_correct_nonan) >= side_wrong_to_step && ...
+                    sum(left_trial_correct_nonan(end - side_wrong_to_step + 1:end)) < 0.1 ...
+                    && stepped_left > too_right && ~missed_trials(tone_n-1)
 
+                move(stepper_lr, - stepper_lr_steps); release(stepper_lr);                
+                stepped_left = stepped_left - stepper_lr_steps;
+                disp(['left port closer: ' num2str(stepped_left)]);
+                port_move_left(tone_n+1) = - 1;
+            end
+
+            % Same for right
+            if port_lr_move && length(right_trial_correct_nonan) >= side_wrong_to_step && ...
+                    sum(right_trial_correct_nonan(end - side_wrong_to_step + 1:end)) < 0.1 ...
+                    && stepped_left < too_left && ~missed_trials(tone_n-1)
+               
+                move(stepper_lr, stepper_lr_steps); release(stepper_lr);                
+                stepped_left = stepped_left + stepper_lr_steps;
+            
+                disp(['right port closer: ' num2str(stepped_left)]);
+                port_move_left(tone_n+1) = 1;
+            end
         
         if tone_n > max_tries
             too_long= 1;
         else
-
         
             % Blast the laser for Arch
             writeDigitalPin(mypi,pin_laser,1);
             
-    
-    
-    
-                % Play the ambiguous tone
+            % Play the ambiguous tone
             current_cond=seq_side(tone_n);
-     
-    
             PsychPortAudio('Start', pa_ambig, 1, 0, 0);
             tone_start = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
             'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
@@ -339,122 +290,13 @@ while ( n < n_trials )
         % After tone's time is over, stop it and transition to waiting for
         % licks
         if milliseconds(time_now - tone_start) >= 1150
-%             if lick_1st == 1
-%                 anticip = [anticip 0];
-%             end
-            early_lick_trials_abs(tone_n) = 0;
-%             if early_lick_trials_abs(10) < 3
-%                 last_10_early_abs = sum( early_lick_trials_abs(tone_n-9:tone_n) );
-%                % disp(["early abs lick rate: " num2str( last_10_early_abs )]);
-%                 plot(tone_n, last_10_early_abs, 'r*');
-%                 xlim([0 tone_n+1]);
-%             end
 
             PsychPortAudio('Stop', pa_ambig);
-
+            pause(0.05);
             PsychPortAudio('Start', pa_go, 1, 0, 0);
             response_start = datetime( datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
             state = RESPONSE;
-        
-%         elseif (lick_detected_left) || (lick_detected_right)
-% %             if lick_1st == 1
-% %                 anticip = [anticip 1];
-% %                 lick_1st = 0;
-% %             end
-%             early_lick_trials_abs(tone_n) = 1;
-%             early_lick = [ early_lick milliseconds(time_now - tone_start)];
-% %             if early_lick_trials_abs(10) < 3
-% %                 last_10_early_abs = sum( early_lick_trials_abs(tone_n-9:tone_n) );
-% %                % disp(["early lick at: " num2str( milliseconds(time_now - tone_start) )]);
-% %                 plot(tone_n, last_10_early_abs,'r*');
-% %                 xlim([0 tone_n+1]);
-% %             end
-% %             if punish_antic == 1
-% % %                 PsychPortAudio('Start', pa_punish, 1, 0, 0);
-% % %                 pause(0.05);
-% % %                 PsychPortAudio('Stop', pa_punish);
-% %                 disp(['anticipatory lick during the sound']);
-% %                 early_lick = [ early_lick milliseconds(time_now - tone_start)];
-% %                 early_lick_trials_delay(tone_n) = 1;
-% %                 if early_lick_trials_delay(10) < 3
-% %                     last_10_early_delay = sum( early_lick_trials_delay(tone_n-9:tone_n) );
-% %                    % disp(["early delay lick rate: " num2str( last_10_early_delay )]);
-% %                     plot(tone_n, last_10_early_delay, 'k*');
-% %                     xlim([0 tone_n+1]);
-% %                 end
-% %                 state = WAIT_PUNISHMENT_TIME_OUT;
-% %                 punish_start = datetime( datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-% %                     'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-% %             end
-%         end
-        
-        end
-    end
-    
-    %% Period of time when a mouse needs to use working memory
-    if state==WORKING_MEMORY
-        time_now = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-        % After waiting time is over, stop it and transition to response
-        if milliseconds(time_now - working_memory_starts) >= current_wait
-            early_lick_trials_delay(tone_n) = 0;
-            if early_lick_trials_delay(10) < 3
-                last_10_early_delay = sum( early_lick_trials_delay(tone_n-9:tone_n) );
-               % disp(["early delay lick rate: " num2str( last_10_early_delay )]);
-                plot(tone_n, last_10_early_delay, 'k*');
-                xlim([0 tone_n+1]);
-            end
-            % Put servo to the mouth
-%             writePosition(serv,servo_near);
-            % Start playing go cue
-            
-            PsychPortAudio('Start', pa_go, 1, 0, 0);
-            response_start = datetime( datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-            state = RESPONSE;
-            
-        elseif (lick_detected_left) || (lick_detected_right)
-%             PsychPortAudio('Start', pa_punish, 1, 0, 0);
-%             pause(0.05);
-%             PsychPortAudio('Stop', pa_punish);
-            disp('lick during working memory delay');
-%             early_lick = [ early_lick milliseconds(time_now - tone_start)];
-            early_lick_trials_delay(tone_n) = 1;
-            if early_lick_trials_delay(10) < 3
-                last_10_early_delay = sum( early_lick_trials_delay(tone_n-9:tone_n) );
-              %  disp(["early delay lick rate: " num2str( last_10_early_delay )]);
-                plot(tone_n, last_10_early_delay, 'k*');
-                xlim([0 tone_n+1]);
-            end
-            state = WAIT_PUNISHMENT_TIME_OUT;
-            punish_start = datetime( datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-        end
-        
-    end
-    
-    %% Punishment time out for not waiting
-    if state == WAIT_PUNISHMENT_TIME_OUT
-        if lick_detected_left || lick_detected_right
-%             PsychPortAudio('Start', pa_punish, 1, 0, 0);
-%             pause(0.05);
-%             PsychPortAudio('Stop', pa_punish);
-%             writePosition(serv,servo_away);
-            state = PRE_TONE_DELAY;
-            pre_tone_delay_start = datetime( datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-        end
-        
-        time_now = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-        % After punishment's time is over, stop it and transition to waiting for
-        % licks
-        if milliseconds(time_now-punish_start) >= (wait_punish_time_out_dur+randi(200))
-%             writePosition(serv,servo_away);
-            state = PRE_TONE_DELAY;
-            pre_tone_delay_start = datetime( datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
         end
     end
     
@@ -465,7 +307,7 @@ while ( n < n_trials )
             disp('undeserved reward');
             free(tone_n) = 1;
             state=REWARD;
-            left_trial_correct = [left_trial_correct .5];
+            left_trial_correct = [left_trial_correct 0.01];
             choice_made(tone_n) = 0;
             if length(left_trial_correct) >=10
                 last_10_left_corr = sum( left_trial_correct(end-9:end) );
@@ -486,7 +328,7 @@ while ( n < n_trials )
             disp('undeserved reward');
             free(tone_n) = 1;
             state=REWARD;
-            right_trial_correct = [right_trial_correct .5];
+            right_trial_correct = [right_trial_correct 0.01];
             choice_made(tone_n) = 0;
             if length(right_trial_correct) >=10
                 last_10_right_corr = sum( right_trial_correct(end-9:end) );
@@ -502,8 +344,8 @@ while ( n < n_trials )
         end
 
 
-        if tone_n>=missed_till_freebie
-            if freebie && sum(missed_trials(tone_n-(missed_till_freebie-1):tone_n))==missed_till_freebie && freebie_n < freebie_max
+        if tone_n>=missed_till_freebie+1
+            if freebie && sum(missed_trials(tone_n-1-(missed_till_freebie-1):tone_n-1))==missed_till_freebie && freebie_n < freebie_max
                 state=REWARD;
                 freebie_n = freebie_n+1;
                 free(tone_n) = 2;
@@ -606,126 +448,83 @@ while ( n < n_trials )
             pre_tone_delay_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
         end
-        
 
     end
     
     %% Choice punishment
     if state== CHOICE_PUNISHMENT_TIME_OUT
-%         if reward_alt == 1
-%             if ((current_cond==left) && (lick_detected_left==1)) || (current_cond==right) && (lick_detected_right==1)
-%                 state = LASER_PREP;
-%                 disp('hop');
-%                 PsychPortAudio('Stop', pa_go);
-%                 pre_tone_delay_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-%                     'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-%             end
-%         end
     
         time_now = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                   'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
         % Move to the pre-tone delay after the timeout is over
         if milliseconds(time_now-choice_punish_timeout_start)>=choice_punish_time_out_dur
-%             writePosition(serv,servo_away);
             state = LASER_PREP;
             PsychPortAudio('Stop', pa_go);
             pre_tone_delay_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-        end
-        
+        end      
 
     end
     
     %% Reward
-    if state == REWARD
-        if current_wait>=1500
-            wait_increment=0;
-            current_wait=1500;
-        end
-        
+    if state == REWARD        
         n=n+1;
-        current_waits(n) = current_wait;
+
         cond_count=cond_count+1;
         if current_cond == left
-           % if mouse_id == 42
             writeDigitalPin(mypi,pin_valv_left,1);
             pause(reward_dur_ms*.001);
             writeDigitalPin(mypi,pin_valv_left,0);
-         %   end
             pause(.1);
-            
             writeDigitalPin(mypi,pin_valv_left,1);
-            
             pause(reward_dur_ms*.001);
             writeDigitalPin(mypi,pin_valv_left,0);
             
-            disp(['left lick detected, current wait: ' num2str(current_wait) 'ms; trial #' num2str(n) ]); 
+            disp(['left reward given; trial #' num2str(n) ]); 
         else
-        %if mouse_id == 42  
+ 
             writeDigitalPin(mypi,pin_valv_right,1);
             pause(reward_dur_ms*.001);
             writeDigitalPin(mypi,pin_valv_right,0);
-        %end
             pause(.1);
             
             writeDigitalPin(mypi,pin_valv_right,1);
-            
             pause(reward_dur_ms*.001);
             writeDigitalPin(mypi,pin_valv_right,0);
             
-            disp(['right lick detected, current wait: ' num2str(current_wait) 'ms; trial #' num2str(n) ]);  
+            disp(['right t reward given; trial #' num2str(n) ]);  
         end
-        if n>=imaged_trials
-            writeDigitalPin(mypi,pin_ca_imaging,0);
-        end
-        pause(2);
+
+
         PsychPortAudio('Stop', pa_go);
 %         writePosition(serv,servo_away);
         state = LASER_PREP;
         pre_tone_delay_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-        % increment the delay if the last 10 trials had 10% or less wait
-        % and 10% or less missed trials
-        incr_stabil=incr_stabil+1;
-        if (last_10_missed<=2) & (last_10_early_delay<=2)
-            
-            if incr_stabil>=5
-                incr_stabil=0;
-                current_wait=current_wait+wait_increment;
-            end
-        end
-    end
-    
-    
 
-    
+    end
     
 end
 
 % % Play end tone & close the audio device:
 sound_end;
 
+training_end = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
+                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
 
-post_note = input(["Anything special after the experiment? \n:"]);
+post_note = input("Anything special after the experiment? \n:", "s");
 if ~exist(['os_data_figs/os' num2str(mouse_id) ], 'dir')
        mkdir()
     end
 discr=1;
 
-save(['os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_B3.mat'], ...
+save(['os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_B4.mat'], ...
     'missed_trials', 'choice_made', ...
     'left_trial_correct','right_trial_correct', 'training_start',...
     'left_lick_times','right_lick_times', ...
     'amb_tone_times','right_tone_times','trial_order', 'weight', 'discr', ...
     'pre_note', 'post_note', 'n', 'reward_alt',  'free');
 
-if current_wait == 2000
-    punish_antic=1;
-else
-    punish_antic=0;
-end
-
-current_stage = 3;
 
 % Truncate
 missed_trials = missed_trials(1:tone_n-1)';
@@ -734,29 +533,21 @@ seq_side = seq_side(1:tone_n-1)';
 tone_times = tone_times(1:tone_n-1)';
 choice = choice_made(1:tone_n-1)';
 free = free(1:tone_n-1)';
-
-save(['reference_oscc' num2str(mouse_id) '.mat'], ...
-    'missed_trials', 'left_trial_correct','right_trial_correct',  ...
-    'seq_laser', 'seq_side', 'tone_times', 'choice', ...
-    'reward_alt', 'current_stage');
-
+port_move_left = port_move_left(1:tone_n-1)';
 
 saveas(gcf, ['os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_B4.fig']);
 saveas(gcf, ['os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_B4.jpg']);
 
-
 % Save csv 
-results_table = table(missed_trials, seq_laser, seq_side, tone_times, choice, free,...
-        'VariableNames', {'missed', 'laser', 'side', 'tone_ts', 'choice', 'free'});
-writetable(results_table, ['os' num2str(mouse_id) '_laser_'  datestr(now,'dd-mm-yyyy_HH-MM') '.csv']);
-
+results_table = table(missed_trials, seq_laser, seq_side, tone_times, choice, free, port_move_left, ...
+        'VariableNames', {'missed', 'laser', 'side', 'tone_ts', 'choice', 'free', 'port_move_left'});
+writetable(results_table, ['os_data_figs/os' num2str(mouse_id)  '/os' num2str(mouse_id) '_laser_'  datestr(now,'dd-mm-yyyy_HH-MM') '.csv']);
+writematrix(right_lick_times', ['os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_t_licks_R_'  datestr(now,'dd-mm-yyyy_HH-MM')  '.csv']);
+writematrix(left_lick_times', ['os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_t_licks_L_'  datestr(now,'dd-mm-yyyy_HH-MM')  '.csv']);
 
 correct_left = sum(left_trial_correct)/length(left_trial_correct)
 correct_right = sum(right_trial_correct)/length(right_trial_correct)
-anticip_ratio = sum(anticip)/length(anticip)
 
-training_end = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
 training_duration = training_end - training_start;
 disp(['training duration: ' datestr(training_duration,'HH:MM:SS.FFF')]);
 % writePosition(serv,servo_near);
