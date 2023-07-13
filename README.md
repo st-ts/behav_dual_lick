@@ -1,5 +1,5 @@
 # MATLAB scripts for dual lick task
-Set of programs to run the experiments with a dual-choice discrimination task with auditory cues. Depending on the tone (high or low) a mouse needs to lick left or right water port for a water reward (mice are water-deprived)
+Set of programs to run the experiments with a dual-choice discrimination task with auditory cues. Depending on the tone (high or low) a mouse needs to lick left or right water port for a water reward (mice are water-deprived). The tone is 5 beeps of 150 ms pure tone (3 kHz for low and 10 kHz for high conditions) separated by 100 ms silence.
 
 ## Stages of training:
 1. (A1) Introducing to the rewards from water port. Mouse is rewarded with water whenever it licks eaither of the 2 ports. A go cue sounds right before the water delivery
