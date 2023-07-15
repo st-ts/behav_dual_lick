@@ -16,10 +16,10 @@ seq_side = repmat([left right], 1, tr_per_cond*4)';
 tr_total = length(seq_laser);
 permut_order = randperm(tr_total);
 seq_laser = seq_laser(permut_order);
-seq_side = seq_cide(permut_order);
+seq_side = seq_side(permut_order);
 
 %% Variables to help out the poor mousie
-max_missed = 
+max_missed = 5;
 
 %% Stats tracking variables
 choice = zeros(tr_total,1);
@@ -90,7 +90,8 @@ disp(['starting the task, time: ' datestr(now,'dd-mm-yyyy HH:MM:SS.FFF')]);
 training_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
 
-lfg = 1;
+
+lfg = true;
 
 %% Run behavioral loop
 while lfg
@@ -104,7 +105,7 @@ while lfg
         tr_current = tr_current + 1; % trial counter
 
         if tr_current == tr_total+1
-            lfg = 0;
+            lfg = false; % prob not even needed
             break
         end
         % Change the position of the servo openers according to the current 
@@ -125,46 +126,7 @@ while lfg
             writePosition(servo_las_R,servo_las_open_R);
         end
 
-        % Move waterports to counteract the bias
-%         if tr_current > max_conseq_to_move
-%             % If too many consecuttive right trials, move left port closer
-%             if sum(choice(tr_current - max_conseq_to_move : tr_current-1)) <= - max_conseq_to_move && ...
-%                     stepped_left > too_right && ~missed_trials(tr_current - 1)
-%                 move(stepper_lr, - stepper_lr_steps); release(stepper_lr);                
-%                 stepped_left = stepped_left - stepper_lr_steps;
-%                 disp(['left port closer: ' num2str(stepped_left)]);
-%                 port_move_left(tr_current) = - 1;
-%                 time_now = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-%                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-%                 port_move_ts (tr_current) = milliseconds(time_now - training_start);
-%             % Same for right port
-%             elseif sum(choice(tr_current - max_conseq_to_move : tr_current-1)) >= max_conseq_to_move && ...
-%                     stepped_left > too_left && ~missed_trials(tr_current - 1)
-%                 move(stepper_lr, stepper_lr_steps); release(stepper_lr);                
-%                 stepped_left = stepped_left + stepper_lr_steps;
-%                 disp(['right port closer: ' num2str(stepped_left)]);
-%                 port_move_left(tr_current) = 1;
-%                 time_now = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-%                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-%                 port_move_ts (tr_current) = milliseconds(time_now - training_start);
-%             end
-            % Set enforcement to only be able to pick 1 side if too biased
-            if tr_current > max_conseq_to_force
-                % if too many rights, forced to left
-                if sum(choice(tr_current - max_conseq_to_force : tr_current-1)) <= - max_conseq_to_force
-                    forced(tr_current) = left;
-                    enforce = left;
-                    disp('left enforced');
-                % vice versa
-                elseif sum(choice(tr_current - max_conseq_to_force : tr_current-1)) >= max_conseq_to_force
-                    forced(tr_current) = right;
-                    enforce = right;
-                    disp('right enforced');
-                end
-                
-%             end
-
-        end
+      
 
 %         % Also, why don't we plot everything here: LATER ADD
 %         if tr_current > 10
@@ -189,12 +151,13 @@ while lfg
         end
 
     elseif state == LASER_STIM
+        % In this state, signal sent to Arduino to activate the laser
         laser_t = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
         laser_stim_ts(tr_current) = milliseconds(laser_t - training_start);
         % Blast the laser for Arch
         writeDigitalPin(mypi,pin_laser,1);
-        pause(0.05);
+        pause(0.02);
         writeDigitalPin(mypi,pin_laser,0);
         state = PRE_RESP;
 
@@ -209,19 +172,15 @@ while lfg
         end
 
     elseif state == RESPONSE
-            if lick_detected_left && enforce ~= right
+
+            if lick_detected_left && seq_side(tr_current) == left
                 choice(tr_current) = left;
                 disp(['tr #' num2str(tr_current) ', choice: left']);
-                if enforce == left
-                    enforce = 0;
-                end
                 state=REWARD;
+                
             elseif lick_detected_right && enforce ~= left
                 choice(tr_current) = right;
                 disp(['tr #' num2str(tr_current) ', choice: right']);
-                if enforce == right
-                    enforce = 0;
-                end
                 state=REWARD;
             end
         
