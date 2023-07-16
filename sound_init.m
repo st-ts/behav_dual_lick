@@ -27,12 +27,12 @@ device = devices(deviceRow).DeviceIndex;
     InitializePsychSound(1);
     
     % choose sounds
-    wav_go = 'go_cue.wav';
-    wav_low = 'tone3kHz5times.wav';
-    wav_high = '10khz_sound.wav';
-    wav_end = "end_exper.wav";
+    wav_go = 'sounds/go_cue.wav';
+    wav_low = 'sounds/tone3kHz5times.wav';
+    wav_high = 'sounds/tone10kHz150ms.wav';
+    wav_end = "sounds/end_exper.wav";
 %     wav_ambig = "tone_5370Hz.wav";
-    wav_ambig =  "ambig.wav";
+    wav_ambig =  "sounds/ambig.wav";
     % Read WAV file from filesystem:
     [y_go, freq_go] = psychwavread(wav_go);
     wavedata_go = y_go';
