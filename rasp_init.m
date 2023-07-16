@@ -1,4 +1,6 @@
-%% Set up raspberry pi
+%% Set up raspberry pi 
+% Initalize the pins for all the experiments, and set the values for the
+% servo motors
 mypi = raspi('169.254.156.249', 'pi', 'raspberry');
 
 % Asign and configure pins
@@ -17,8 +19,8 @@ pin_punish_wait = 16;
 port_away = 49;
 port_near = 65;
 servo_las_open_L = 120;
-servo_las_closed_L = 140;
-servo_las_open_R = 80;
+servo_las_closed_L = 180;
+servo_las_open_R = 90;
 servo_las_closed_R = 40;
 
 % %  configure pins
