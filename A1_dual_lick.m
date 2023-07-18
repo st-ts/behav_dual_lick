@@ -38,7 +38,7 @@ lick_n_R= 0;
 %% Set up raspberry pi
 mypi = raspi('169.254.156.249', 'pi','raspberry');
 
-load('reference_rasp.mat'); % file with all the pin numbers and values for servo open / close
+load('D:/dual_lick/reference_rasp.mat'); % file with all the pin numbers and values for servo open / close
 
 configurePin(mypi,pin_sens_left,'DigitalInput');
 configurePin(mypi,pin_sens_right,'DigitalInput');
