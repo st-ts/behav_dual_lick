@@ -14,7 +14,7 @@ if (sum(sens_buffer_left) == 0) && (sens_now_left == 1)
     left_lick_time = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
             'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
     lick_n_L = lick_n_L +1;
-    left_lick_times(lick_n_L) = milliseconds(training_start-left_lick_time);
+    left_lick_times(lick_n_L) = milliseconds(left_lick_time-training_start);
 else
     lick_detected_left = 0;
 end
@@ -31,7 +31,7 @@ if (sum(sens_buffer_right) == 0) && (sens_now_right == 1)
     right_lick_time = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
             'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
     lick_n_R = lick_n_R +1;
-    right_lick_times(lick_n_R) = milliseconds(training_start-right_lick_time);
+    right_lick_times(lick_n_R) = milliseconds(right_lick_time-training_start);
 else
     lick_detected_right = 0;
 end

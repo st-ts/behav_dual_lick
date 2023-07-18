@@ -226,8 +226,8 @@ disp(['training duration: ' datestr(training_duration,'HH:MM:SS.FFF')]);
 post_note = input(["Anything special after the experiment? \n:"]);
 weight_after = input(['Mouse ' num2str(mouse_id) ' weight after \n:']);
 
-if ~exist(['os_data_figs/os' num2str(mouse_id) ], 'dir')
-       mkdir(['os_data_figs/os' num2str(mouse_id) ]);
+if ~exist(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) ], 'dir')
+       mkdir(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) ]);
 end
 
 
@@ -236,7 +236,7 @@ left_lick_times = left_lick_times(1:lick_n_L);
 right_lick_times = right_lick_times(1:lick_n_R);
 
 % Save
-save(['os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A1.mat'], ...
+save(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A1.mat'], ...
     'left_lick_times', 'right_lick_times', 'weight', 'freebie_n', ...
     'pre_note', 'post_note', 'weight_after');
 

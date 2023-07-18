@@ -47,9 +47,6 @@ configurePin(mypi,pin_ca_imaging,'DigitalOutput');
 % Let's go test!
 disp('go');
 for i = 1:drops
-
-
-% 
     writeDigitalPin(mypi,pin_valve_r,1);
     pause(reward_dur_right_ms*0.001);
 %     

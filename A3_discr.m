@@ -17,10 +17,8 @@ max_tr_missed = 10;
 % else
 %     port_lr_move = 0;
 % end
-n_trials=350; % 
+n_trials=2; % 
 
-imaged_trials = 100
-;
 pre_tone_delay_dur=500; % in milliseconds
 response_dur = 2500;
 reward_dur_ms = 9;
@@ -30,7 +28,7 @@ reward_dur_ms = 9;
 
 % Load & set the training stage data
 punish_antic=0;
-load(['os_data_figs/os' num2str(mouse_id) '/reference_oscc' num2str(mouse_id) '.mat']);
+load(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) '/reference_oscc' num2str(mouse_id) '.mat']);
 wait_increment = 0;
 
 left_trial_correct_nonan = left_trial_correct (~isnan(left_trial_correct));
@@ -91,19 +89,20 @@ switch_cond = randi([1,switch_max],1,1);
 
 
 %% Set up raspberry pi
-mypi = raspi('169.254.156.249', 'pi', 'raspberry');
-
-% Asign and configure pins and load servos' info
-load('reference_rasp.mat'); % file with all the pin numbers and values for servo open / close
-
-configurePin(mypi,pin_sens_left,'DigitalInput');
-configurePin(mypi,pin_sens_right,'DigitalInput');
-configurePin(mypi,pin_valv_left,'DigitalOutput');
-configurePin(mypi,pin_valv_right,'DigitalOutput');
-configurePin(mypi,pin_ca_imaging,'DigitalOutput');
-serv = servo(mypi, pin_servo_water);
-servo_away = 90;
-servo_near = 90;
+rasp_init;
+% mypi = raspi('169.254.156.249', 'pi', 'raspberry');
+% 
+% % Asign and configure pins and load servos' info
+% load('reference_rasp.mat'); % file with all the pin numbers and values for servo open / close
+% 
+% configurePin(mypi,pin_sens_left,'DigitalInput');
+% configurePin(mypi,pin_sens_right,'DigitalInput');
+% configurePin(mypi,pin_valv_left,'DigitalOutput');
+% configurePin(mypi,pin_valv_right,'DigitalOutput');
+% configurePin(mypi,pin_ca_imaging,'DigitalOutput');
+% serv = servo(mypi, pin_servo_water);
+% servo_away = 90;
+% servo_near = 90;
 % writePosition(serv,servo_near);
 
 %% Stepper
@@ -785,9 +784,7 @@ current_cond = (current_cond-1.5)*2;
             
             disp(['right lick detected, current wait: ' num2str(current_wait) 'ms; trial #' num2str(n) ]);  
         end
-        if n>=imaged_trials
-            writeDigitalPin(mypi,pin_ca_imaging,0);
-        end
+
         pause(2);
         PsychPortAudio('Stop', pa_go);
 %         writePosition(serv,servo_away);
@@ -827,8 +824,8 @@ training_duration = training_end - training_start;
 post_note = input(["Anything special after the experiment? \n:"]);
 discr=1;
 % Create the folder for the results if it deosn't exist
-if ~exist(['os_data_figs/os' num2str(mouse_id) ], 'dir')
-       mkdir(['os_data_figs/os' num2str(mouse_id) ]);
+if ~exist(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) ], 'dir')
+       mkdir(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) ]);
     end
 discr=1;
 
@@ -838,7 +835,7 @@ right_lick_times = right_lick_times(1:lick_n_R);
 
 
 %save(['dual_lick_A3_oscc0' num2str(mouse_id) '_' datestr(now,'dd-mm-yyyy_HH-MM') '.mat'], ...
-save(['os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A3.mat'], ...
+save(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A3.mat'], ...
     'missed_trials', 'early_lick', 'early_lick_trials_delay', 'early_lick_trials_abs', 'current_wait', ...
     'left_trial_correct','right_trial_correct', 'training_start',...
     'current_waits','left_lick_times','right_lick_times', 'punish_antic',...
@@ -852,23 +849,21 @@ else
 end
 
 current_stage = 3;
-save(['os_data_figs/os' num2str(mouse_id) '/reference_oscc' num2str(mouse_id) '.mat'], ...
+save(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) '/reference_oscc' num2str(mouse_id) '.mat'], ...
     'missed_trials', 'early_lick', 'early_lick', 'early_lick_trials_abs', 'current_wait', ...
     'left_trial_correct','right_trial_correct', 'punish_antic', ...
     'left_trial_correct_nonan','right_trial_correct_nonan', ...
     'wait_increment', 'current_wait', 'reward_alt', 'current_stage',  'port_move_left');
 
 
-saveas(gcf, ['os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A3.fig']);
-saveas(gcf, ['os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A3.jpg']);
+saveas(gcf, ['D:/dual_lick/os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A3.fig']);
+saveas(gcf, ['D:/dual_lick/os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A3.jpg']);
    % 'dual_lick_A3_oscc0' num2str(mouse_id) '_' datestr(now,'dd-mm-yyyy_HH-MM') '.fig']);
 % saveas(gcf, ['dual_lick_A3_oscc0' num2str(mouse_id) '_' datestr(now,'dd-mm-yyyy_HH-MM') '.jpg']);
 
-
-wait_ratio = sum(early_lick_trials_delay(1:tone_n))/(tone_n-sum(missed_trials))
 correct_left = sum(left_trial_correct_nonan, 'omitnan')/length(left_trial_correct_nonan)
 correct_right = sum(right_trial_correct_nonan, 'omitnan')/length(right_trial_correct_nonan)
-anticip_ratio = sum(anticip)/length(anticip)
+
 try 
     d=sort(early_lick);
     median_early_lick = d( floor ( (length(early_lick_trials_delay)-sum(missed_trials))/2 ) )

@@ -38,10 +38,10 @@ port_move_left = zeros(tr_total,1);
 
 %% Durations of different states
 dur_pre_laser = 1000;
-dur_laser = 1500; % duration of the laser stim before the response time
+dur_laser = 2000; % duration of the laser stim before the response time
 dur_response = 1000;
-dur_post_reward = 1500;
-dur_jitter = 500;
+dur_post_reward = 2500;
+dur_jitter = 1000;
 
 %% State variables
 LASER_PREP = 0;
@@ -53,9 +53,6 @@ REWARD = 5;
 POST_REWARD = 6;
 
 state = LASER_PREP;
-
-%% Initializing sounds
-sound_init;
 
 %% Time logging related variables
 left_lick_times = zeros(10000,1); 
@@ -216,7 +213,6 @@ while lfg
                     end
                     disp('freebie')
                     state=REWARD;
-                end
                 
             
             end
@@ -237,10 +233,6 @@ while lfg
                 writeDigitalPin(mypi,pin_valv_left,1);
                 pause(reward_dur_ms*.001);
                 writeDigitalPin(mypi,pin_valv_left,0);
-                pause(.1);
-                writeDigitalPin(mypi,pin_valv_left,1);
-                pause(reward_dur_ms*.001);
-                writeDigitalPin(mypi,pin_valv_left,0);
             end
             disp(['tr #' num2str(tr_current) ', reward left']);
 
@@ -250,10 +242,6 @@ while lfg
             writeDigitalPin(mypi,pin_valv_right,0);
             if ~freebie(tr_current)
                 pause(.1);
-                writeDigitalPin(mypi,pin_valv_right,1);
-                pause(reward_dur_ms*.001);
-                writeDigitalPin(mypi,pin_valv_right,0);
-                 pause(.1);
                 writeDigitalPin(mypi,pin_valv_right,1);
                 pause(reward_dur_ms*.001);
                 writeDigitalPin(mypi,pin_valv_right,0);
@@ -277,8 +265,7 @@ while lfg
 
 
 end
-% % Play end tone & close the audio device:
-sound_end;
+
 
 % Make table with results
 results_table = table(missed_trials, seq_laser, choice, freebie, resp_start_ts, ...
