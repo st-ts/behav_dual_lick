@@ -17,7 +17,7 @@ max_tr_missed = 10;
 % else
 %     port_lr_move = 0;
 % end
-n_trials=2; % 
+n_trials=350; % 
 
 pre_tone_delay_dur=500; % in milliseconds
 response_dur = 2500;
