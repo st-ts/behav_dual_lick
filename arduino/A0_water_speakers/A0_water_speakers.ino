@@ -2,7 +2,8 @@
 #define SPEAKER_LEFT 9 
 #define SPEAKER_RIGHT 10
 
-#define LEFT_TRIAL_PIN 11
+// for A0 script, these become "too many left/right trials"
+#define LEFT_TRIAL_PIN 11 
 #define RIGHT_TRIAL_PIN 12
 
 #define LEFT_LICK 5
@@ -13,9 +14,14 @@
 
 #define LEFT 1
 #define RIGHT -1
+#define NO 0
 
 #define LEFT_TONE 10000
 #define RIGHT_TONE 3000
+
+#define LEFT_REWARD_DUR 15
+#define RIGHT_REWARD_DUR 15
+
 
 #define RESPONSE_DUR 1000
 
@@ -34,6 +40,10 @@ const int right_tone = 3000;
 
 int left_trial = 0;
 int right_trial = 0;
+
+// lick detecting variables
+int prev_left_lick_state;
+int prev_right_lick_state;
 
 
 
@@ -59,20 +69,60 @@ void loop() {
   ////  if (left_trial && right_trial) {
    //     go_sound(SPEAKER_LEFT);  // CHANGE LATER TO SPEAKERS BOTH
    // }
-    
+    int lick_detected = monitor_licks();
+    int too_many_left = digitalRead(LEFT_TRIAL_PIN);
+    int too_many_right = digitalRead(RIGHT_TRIAL_PIN);
 
-  // Go signal
-  go_sound();
+    // If not too many left/right trials, deliver a reward
+    if (!too_namy_left && (lick_detected == LEFT)) {
+        go_sound();
+        deliver_reward(LEFT);
+    } else if (!not_too_many_right && (lick_detected == RIGHT)) {
+        go_sound();
+        deliver_reward(RIGHT);
+    }
+}
 
-  delay(1000);  // 1 second delay before the next AM signal
+void deliver_reward(int side) {
+    int port; int reward_dur;
+    // set the side-related params
+    if (side == LEFT) {
+        port = LEFT_PORT;
+        reward_dur = LEFT_REWARD_DUR;
+    } else {
+        port = RIGHT_PORT;
+        reward_dur = RIGHT_REWARD_DUR;
+    }
+    // deliver that reward
+    digitalWrite(port, HIGH);
+    delay(reward_dur);
+    digitalWrite(port, LOW);
 
-  tone(SPEAKER_LEFT, 3000);
-    delay(500);
-  noTone(SPEAKER_LEFT);
-  tone(SPEAKER_RIGHT, 1000);
-  delay(500);
-  noTone(SPEAKER_RIGHT);
-  delay(1000);
+    // send signal to raspberri about the reward delivered
+
+}
+
+// Function outputing the info on whether a lick was detected
+int monitor_licks() {
+    // Read the sensor data
+    int left_lick_state = digitalRead(LEFT_LICK);
+    int right_lick_state = digitalRead(RIGHT_LICK);
+    int lick_detected;
+    // compare with the previous state
+    if (left_lick_state && !prev_left_lick_state){
+        lick_detected = LEFT;
+    } else if (right_lick_state && !prev_right_lick_state) {
+        lick_detected = RIGHT;
+    } else {
+        lick_detected = NO;
+    }
+
+    // make the current states to be previous
+    prev_left_lick_state = left_lick_state;
+    prev_right_lick_state = right_lick_state;
+
+    return lick_detected;
+
 }
 
 int discr_trial(int side) {
