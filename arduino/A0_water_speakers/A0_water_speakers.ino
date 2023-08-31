@@ -48,6 +48,7 @@ int prev_right_lick_state;
 
 
 void setup() {
+    // init all those damn pins
     pinMode(SPEAKER_LEFT, OUTPUT);
     pinMode(SPEAKER_RIGHT, OUTPUT);
     pinMode(SPEAKERS_BOTH, OUTPUT);
@@ -57,27 +58,21 @@ void setup() {
     pinMode(RIGHT_LICK, INPUT);
     pinMode(LEFT_PORT, OUTPUT);
     pinMode(RIGHT_PORT, OUTPUT);
+    // initialise communication
+  //  Serial.begin(9600);
 }
 
 void loop() {
-    // Get signal from Raspberry about the start of the trial and which trial it is
- //   left_trial = digitalRead(LEFT_TRIAL_PIN);
-  //  right_trial = digitalRead(RIGHT_TRIAL_PIN);
 
-
-        // if it is A1, both left and right will give signal
-  ////  if (left_trial && right_trial) {
-   //     go_sound(SPEAKER_LEFT);  // CHANGE LATER TO SPEAKERS BOTH
-   // }
     int lick_detected = monitor_licks();
     int too_many_left = digitalRead(LEFT_TRIAL_PIN);
     int too_many_right = digitalRead(RIGHT_TRIAL_PIN);
 
     // If not too many left/right trials, deliver a reward
-    if (!too_namy_left && (lick_detected == LEFT)) {
+    if (!too_many_left && (lick_detected == LEFT)) {
         go_sound();
         deliver_reward(LEFT);
-    } else if (!not_too_many_right && (lick_detected == RIGHT)) {
+    } else if (!too_many_right && (lick_detected == RIGHT)) {
         go_sound();
         deliver_reward(RIGHT);
     }
