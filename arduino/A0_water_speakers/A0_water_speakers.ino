@@ -1,5 +1,5 @@
 #define SPEAKERS_BOTH 8
-#define SPEAKER_LEFT 9 
+#define SPEAKER_LEFT 9
 #define SPEAKER_RIGHT 10
 
 // for A0 script, these become "too many left/right trials"
@@ -59,7 +59,7 @@ void setup() {
     pinMode(LEFT_PORT, OUTPUT);
     pinMode(RIGHT_PORT, OUTPUT);
     // initialise communication
-  //  Serial.begin(9600);
+    Serial.begin(9600);
 }
 
 void loop() {
@@ -67,7 +67,7 @@ void loop() {
     int lick_detected = monitor_licks();
     int too_many_left = digitalRead(LEFT_TRIAL_PIN);
     int too_many_right = digitalRead(RIGHT_TRIAL_PIN);
-
+    too_many_left = false;
     // If not too many left/right trials, deliver a reward
     if (!too_many_left && (lick_detected == LEFT)) {
         go_sound();
@@ -93,7 +93,17 @@ void deliver_reward(int side) {
     delay(reward_dur);
     digitalWrite(port, LOW);
 
-    // send signal to raspberri about the reward delivered
+    // send // Write the sinewave points, followed by the terminator "Carriage Return" and "Linefeed".
+    unsigned long rewardTime = millis();
+    Serial.print(rewardTime);
+    Serial.write(13);
+    Serial.write(10);
+    
+    Serial.print(port);
+    Serial.write(13);
+    Serial.write(10);
+
+    
 
 }
 
