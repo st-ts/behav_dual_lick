@@ -73,34 +73,35 @@ tr = 0;
 lick_1st = 1;
 
 %% Set up raspberry pi
-mypi = raspi('169.254.156.249', 'pi', 'raspberry');
-
-% Asign and configure pins
-load('reference_rasp.mat'); % file with all the pin numbers and values for servo open / close
-
-configurePin(mypi,pin_sens_left,'DigitalInput');
-configurePin(mypi,pin_sens_right,'DigitalInput');
-configurePin(mypi,pin_valv_left,'DigitalOutput');
-configurePin(mypi,pin_valv_right,'DigitalOutput');
-configurePin(mypi,pin_ca_imaging,'DigitalOutput');
-serv = servo(mypi, pin_servo_water);
+% mypi = raspi('169.254.156.249', 'pi', 'raspberry');
+% 
+% % Asign and configure pins
+% load('reference_rasp.mat'); % file with all the pin numbers and values for servo open / close
+% 
+% configurePin(mypi,pin_sens_left,'DigitalInput');
+% configurePin(mypi,pin_sens_right,'DigitalInput');
+% configurePin(mypi,pin_valv_left,'DigitalOutput');
+% configurePin(mypi,pin_valv_right,'DigitalOutput');
+% configurePin(mypi,pin_ca_imaging,'DigitalOutput');
+% serv = servo(mypi, pin_servo_water);
 
 %writePosition(serv,port_near);
+rasp_init();
 
 %% Stepper
 port_lr_move = 1;
-ardu = arduino('COM5','Uno','Libraries','Adafruit\MotorShieldV2');
-shield = addon(ardu,'Adafruit\MotorShieldV2');
-addrs = scanI2CBus(ardu,0);
+% ardu = arduino('COM1','Uno','Libraries','Adafruit\MotorShieldV2');
+% shield = addon(ardu,'Adafruit\MotorShieldV2');
+% addrs = scanI2CBus(ardu,0);
+% 
+% stepper_lr = stepper(shield,1,200);
+% stepper_lr.RPM = 200;
+% stepper_lr_steps = 100; % 
+% stepped_left = 0; too_left = 2400; too_right = - 2400; % find out empiricaylly
+% side_wrong_to_step = 4;
+% 
 
-stepper_lr = stepper(shield,1,200);
-stepper_lr.RPM = 200;
-stepper_lr_steps = 100; % 
-stepped_left = 0; too_left = 2400; too_right = - 2400; % find out empiricaylly
-side_wrong_to_step = 4;
-
-
-port_move_left = zeros(1,max_tone_n);
+% port_move_left = zeros(1,max_tone_n);
 
 
 %% Variables for detecting licks
@@ -164,7 +165,7 @@ disp(['starting the task, time: ' datestr(now,'dd-mm-yyyy HH:MM:SS.FFF')]);
 % Start the task
 training_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-writeDigitalPin(mypi,pin_ca_imaging,1);
+% writeDigitalPin(mypi,pin_ca_imaging,1);
 pre_tone_delay_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
 figure(1); hold on; ylim([-0.2 11])
@@ -260,12 +261,14 @@ scr_detect_lick;
 
             % Play the tone according to the condition
             if current_cond == left
-                PsychPortAudio('Start', pa_high, 1, 0, 0);
+                send_rasp_pulse(mypi, pin_tone_left,10);
+%                 PsychPortAudio('Start', pa_high, 1, 0, 0);
                 tone_start = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
                 left_tone_times(tone_n) = milliseconds(training_start-tone_start);
             else 
-                PsychPortAudio('Start', pa_low, 1, 0, 0);
+                send_rasp_pulse(mypi, pin_tone_right,10);
+%                PsychPortAudio('Start', pa_low, 1, 0, 0);
                 tone_start = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
                 right_tone_times(tone_n) = milliseconds(training_start-tone_start);
@@ -282,52 +285,52 @@ scr_detect_lick;
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
         % When delay is over, transition to sound and start the tone
         if milliseconds(time_now-pre_tone_delay_start)>=pre_tone_delay_dur+randi(1000)
-             % Move the ports to the left / right if there are X wrong side
-            %choices in a row
-            if port_lr_move && l_tr >= side_wrong_to_step + 1 && ...
-                    sum(left_trial_correct(l_tr - side_wrong_to_step + 1:l_tr))== 0 ...
-                    && stepped_left > too_right && ~missed_trials(tone_n)
-                if tone_n < 40
-                    move(stepper_lr, - stepper_lr_steps*2); release(stepper_lr);
-                    stepped_left = stepped_left - stepper_lr_steps*2;
-                elseif tone_n < 100
-                    move(stepper_lr, - stepper_lr_steps); release(stepper_lr);                
-                    stepped_left = stepped_left - stepper_lr_steps;
-                else
-                    move(stepper_lr, - stepper_lr_steps*0.5); release(stepper_lr);                
-                    stepped_left = stepped_left - stepper_lr_steps*0.5;
-                end
-                disp(['left port closer: ' num2str(stepped_left)]);
-                port_move_left(tone_n+1) = - 1;
-            end
-
-            % Same for right
-            if port_lr_move && r_tr >= side_wrong_to_step + 1 && ...
-                    sum(right_trial_correct(r_tr - side_wrong_to_step + 1:r_tr))== 0 ...
-                    && stepped_left < too_left && ~missed_trials(tone_n)
-                if tone_n < 40
-                    move(stepper_lr, stepper_lr_steps*2); release(stepper_lr);
-                    stepped_left = stepped_left + stepper_lr_steps*2;
-                elseif tone_n < 100
-                    move(stepper_lr, - stepper_lr_steps); release(stepper_lr);                
-                    stepped_left = stepped_left + stepper_lr_steps;
-                else
-                    move(stepper_lr, - stepper_lr_steps*0.5); release(stepper_lr);                
-                    stepped_left = stepped_left + stepper_lr_steps*0.5;
-                end
-                disp(['right port closer: ' num2str(stepped_left)]);
-                port_move_left(tone_n+1) = 1;
-            end
-
+%              % Move the ports to the left / right if there are X wrong side
+%             %choices in a row
+%             if port_lr_move && l_tr >= side_wrong_to_step + 1 && ...
+%                     sum(left_trial_correct(l_tr - side_wrong_to_step + 1:l_tr))== 0 ...
+%                     && stepped_left > too_right && ~missed_trials(tone_n)
+%                 if tone_n < 40
+%                     move(stepper_lr, - stepper_lr_steps*2); release(stepper_lr);
+%                     stepped_left = stepped_left - stepper_lr_steps*2;
+%                 elseif tone_n < 100
+%                     move(stepper_lr, - stepper_lr_steps); release(stepper_lr);                
+%                     stepped_left = stepped_left - stepper_lr_steps;
+%                 else
+%                     move(stepper_lr, - stepper_lr_steps*0.5); release(stepper_lr);                
+%                     stepped_left = stepped_left - stepper_lr_steps*0.5;
+%                 end
+%                 disp(['left port closer: ' num2str(stepped_left)]);
+%                 port_move_left(tone_n+1) = - 1;
+%             end
 % 
-%             if port_lr_move && length(right_trial_correct_nonan) >= side_wrong_to_step && ...
-%                     sum(right_trial_correct_nonan(end - side_wrong_to_step + 1:end)) == 0 ...
+%             % Same for right
+%             if port_lr_move && r_tr >= side_wrong_to_step + 1 && ...
+%                     sum(right_trial_correct(r_tr - side_wrong_to_step + 1:r_tr))== 0 ...
 %                     && stepped_left < too_left && ~missed_trials(tone_n)
-%                 move(stepper_lr, stepper_lr_steps); release(stepper_lr);
-%                 stepped_left = stepped_left + stepper_lr_steps;
+%                 if tone_n < 40
+%                     move(stepper_lr, stepper_lr_steps*2); release(stepper_lr);
+%                     stepped_left = stepped_left + stepper_lr_steps*2;
+%                 elseif tone_n < 100
+%                     move(stepper_lr, - stepper_lr_steps); release(stepper_lr);                
+%                     stepped_left = stepped_left + stepper_lr_steps;
+%                 else
+%                     move(stepper_lr, - stepper_lr_steps*0.5); release(stepper_lr);                
+%                     stepped_left = stepped_left + stepper_lr_steps*0.5;
+%                 end
 %                 disp(['right port closer: ' num2str(stepped_left)]);
 %                 port_move_left(tone_n+1) = 1;
 %             end
+% 
+% % 
+% %             if port_lr_move && length(right_trial_correct_nonan) >= side_wrong_to_step && ...
+% %                     sum(right_trial_correct_nonan(end - side_wrong_to_step + 1:end)) == 0 ...
+% %                     && stepped_left < too_left && ~missed_trials(tone_n)
+% %                 move(stepper_lr, stepper_lr_steps); release(stepper_lr);
+% %                 stepped_left = stepped_left + stepper_lr_steps;
+% %                 disp(['right port closer: ' num2str(stepped_left)]);
+% %                 port_move_left(tone_n+1) = 1;
+% %             end
 
 
             state=TONE;
@@ -344,12 +347,14 @@ scr_detect_lick;
                     trial_order(tone_n) = current_cond;  
             end
             if current_cond == left
-                PsychPortAudio('Start', pa_high, 1, 0, 0);
+                send_rasp_pulse(mypi, pin_tone_left,10);
+%                 PsychPortAudio('Start', pa_high, 1, 0, 0);
                 tone_start = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
                 left_tone_times(tone_n) = milliseconds(training_start-tone_start);
             else 
-                PsychPortAudio('Start', pa_low, 1, 0, 0);
+                send_rasp_pulse(mypi, pin_tone_right,10);
+%                 PsychPortAudio('Start', pa_low, 1, 0, 0);
                 tone_start = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
                 right_tone_times(tone_n) = milliseconds(training_start-tone_start);
@@ -375,11 +380,13 @@ scr_detect_lick;
 %                 plot(tone_n, last_10_early_abs, 'r*');
 %                 xlim([0 tone_n+1]);
 %             end
-            if current_cond == left
-                PsychPortAudio('Stop', pa_high);
-            else
-                PsychPortAudio('Stop', pa_low);
-            end
+%             if current_cond == left
+% 
+%                 PsychPortAudio('Stop', pa_high);
+%             else
+% 
+%                 PsychPortAudio('Stop', pa_low);
+%             end
             state = WORKING_MEMORY;
             working_memory_starts = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
@@ -398,24 +405,24 @@ scr_detect_lick;
 %                 plot(tone_n, last_10_early_abs,'r*');
 %                 xlim([0 tone_n+1]);
 %             end
-            if punish_antic == 1
-                PsychPortAudio('Start', pa_punish, 1, 0, 0);
-                pause(0.05);
-                PsychPortAudio('Stop', pa_punish);
-                disp('anticipatory lick during the sound');
-                early_lick(early_lick_n) = milliseconds(time_now - tone_start);
-                early_lick_n = early_lick_n+1;
-                early_lick_trials_delay(tone_n) = 1;
-%                 if early_lick_trials_delay(10) < 3
-%                     last_10_early_delay = sum( early_lick_trials_delay(tone_n-9:tone_n) );
-%                     disp(["early delay lick rate: " num2str( last_10_early_delay )]);
-%                     plot(tone_n, last_10_early_delay, 'k*');
-%                     xlim([0 tone_n+1]);
-%                 end
-                state = WAIT_PUNISHMENT_TIME_OUT;
-                punish_start = datetime( datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-                    'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-            end
+%             if punish_antic == 1
+%                 PsychPortAudio('Start', pa_punish, 1, 0, 0);
+%                 pause(0.05);
+%                 PsychPortAudio('Stop', pa_punish);
+%                 disp('anticipatory lick during the sound');
+%                 early_lick(early_lick_n) = milliseconds(time_now - tone_start);
+%                 early_lick_n = early_lick_n+1;
+%                 early_lick_trials_delay(tone_n) = 1;
+% %                 if early_lick_trials_delay(10) < 3
+% %                     last_10_early_delay = sum( early_lick_trials_delay(tone_n-9:tone_n) );
+% %                     disp(["early delay lick rate: " num2str( last_10_early_delay )]);
+% %                     plot(tone_n, last_10_early_delay, 'k*');
+% %                     xlim([0 tone_n+1]);
+% %                 end
+%                 state = WAIT_PUNISHMENT_TIME_OUT;
+%                 punish_start = datetime( datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
+%                     'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
+%             end
         end
         
     end
@@ -437,28 +444,28 @@ scr_detect_lick;
 %             writePosition(serv,servo_near);
             pause(.1)
             % Start playing go cue
-            PsychPortAudio('Start', pa_go, 1, 0, 0);
+%             PsychPortAudio('Start', pa_go, 1, 0, 0);
             response_start = datetime( datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
             state = RESPONSE;
             
-        elseif (lick_detected_left) || (lick_detected_right)
-            PsychPortAudio('Start', pa_punish, 1, 0, 0);
-            pause(0.05);
-            PsychPortAudio('Stop', pa_punish);
-            disp('lick during working memory delay');
-            early_lick(early_lick_n) = milliseconds(time_now - tone_start);
-            early_lick_n = early_lick_n+1;
-            early_lick_trials_delay(tone_n) = 1;
-%             if early_lick_trials_delay(10) < 3
-%                 last_10_early_delay = sum( early_lick_trials_delay(tone_n-9:tone_n) );
-%                 disp(["early delay lick rate: " num2str( last_10_early_delay )]);
-%                 plot(tone_n, last_10_early_delay, 'k*');
-%                 xlim([0 tone_n+1]);
-%             end
-            state = WAIT_PUNISHMENT_TIME_OUT;
-            punish_start = datetime( datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
+%         elseif (lick_detected_left) || (lick_detected_right)
+%             PsychPortAudio('Start', pa_punish, 1, 0, 0);
+%             pause(0.05);
+%             PsychPortAudio('Stop', pa_punish);
+%             disp('lick during working memory delay');
+%             early_lick(early_lick_n) = milliseconds(time_now - tone_start);
+%             early_lick_n = early_lick_n+1;
+%             early_lick_trials_delay(tone_n) = 1;
+% %             if early_lick_trials_delay(10) < 3
+% %                 last_10_early_delay = sum( early_lick_trials_delay(tone_n-9:tone_n) );
+% %                 disp(["early delay lick rate: " num2str( last_10_early_delay )]);
+% %                 plot(tone_n, last_10_early_delay, 'k*');
+% %                 xlim([0 tone_n+1]);
+% %             end
+%             state = WAIT_PUNISHMENT_TIME_OUT;
+%             punish_start = datetime( datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
+%                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
         end
         
     end
@@ -599,7 +606,7 @@ scr_detect_lick;
             end
 %             writePosition(serv,servo_away);
             state = PRE_TONE_DELAY;
-            PsychPortAudio('Stop', pa_go);
+%             PsychPortAudio('Stop', pa_go);
             pre_tone_delay_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
         end
@@ -647,7 +654,7 @@ scr_detect_lick;
             writeDigitalPin(mypi,pin_ca_imaging,0);
         end
         pause(1.1);
-        PsychPortAudio('Stop', pa_go);
+%         PsychPortAudio('Stop', pa_go);
 %         writePosition(serv,servo_away);
         state = PRE_TONE_DELAY;
         pre_tone_delay_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
