@@ -11,7 +11,12 @@ pin_sens_left = 24;
 pin_sens_right = 23;
 pin_valv_left = 18;
 pin_valv_right = 15;
-pin_ca_imaging = 26;
+
+% TONES
+pin_tone_go = 26;
+pin_tone_left = 19;
+pin_tone_right = 13;
+
 pin_laser = 20;
 % pin21 used to be "siren on" pin_siren_on = 21; now it's "laser on"
 pin_laser_on = 21;
@@ -29,8 +34,13 @@ configurePin(mypi,pin_sens_left,'DigitalInput');
 configurePin(mypi,pin_sens_right,'DigitalInput');
 configurePin(mypi,pin_valv_left,'DigitalOutput');
 configurePin(mypi,pin_valv_right,'DigitalOutput');
-configurePin(mypi,pin_ca_imaging,'DigitalOutput');
+
 configurePin(mypi,pin_laser,'DigitalOutput');
+% tones 
+configurePin(mypi,pin_tone_go,'DigitalOutput');
+configurePin(mypi,pin_tone_left,'DigitalOutput');
+configurePin(mypi,pin_tone_right,'DigitalOutput');
+
 serv = servo(mypi, pin_servo_water);
 servo_las_L = servo(mypi, pin_servo_laser_L);
 servo_las_R = servo(mypi, pin_servo_laser_R);
