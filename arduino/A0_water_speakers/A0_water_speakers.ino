@@ -1,3 +1,15 @@
+// signals transmitted to MATLAB:
+// 1 - 1eft port lick
+// 2 - right port lick
+// 3 - left port reward
+// 4 - right port reward
+// 5 - left tone starts
+// 6 - right tone starts
+// go cue starts
+// timeout? 
+
+
+
 #define SPEAKERS_BOTH 8
 #define SPEAKER_LEFT 9
 #define SPEAKER_RIGHT 10
@@ -24,6 +36,7 @@
 
 
 #define RESPONSE_DUR 1000
+#define REWARD_COLLECION_DUR 1000
 
 // trial outcome codes
 #define CORRECT 1
@@ -99,11 +112,11 @@ void deliver_reward(int side) {
     Serial.write(13);
     Serial.write(10);
     
-    Serial.print(port);
+    Serial.print(port-1);
     Serial.write(13);
     Serial.write(10);
 
-    
+
 
 }
 
@@ -126,7 +139,17 @@ int monitor_licks() {
     prev_left_lick_state = left_lick_state;
     prev_right_lick_state = right_lick_state;
 
+
+    unsigned long lickTime = millis();
+    Serial.print(lickTime);
+    Serial.write(13);
+    Serial.write(10);
+    
+    Serial.print(lick_detected);
+    Serial.write(13);
+    Serial.write(10);
     return lick_detected;
+    
 
 }
 
@@ -177,6 +200,15 @@ void play_tone(int side) {
         noTone(speaker);
         delay(50);
     }
+
+    unsigned long toneTime = millis();
+    Serial.print(toneTime);
+    Serial.write(13);
+    Serial.write(10);
+    
+    Serial.print(side);
+    Serial.write(13);
+    Serial.write(10);
 }
 
 void go_sound() {
@@ -186,4 +218,13 @@ void go_sound() {
         delayMicroseconds(1000);  // Adjust this delay as needed for the desired audio quality
     }
     noTone(SPEAKERS_BOTH);
+
+    unsigned long goTime = millis();
+    Serial.print(goTime);
+    Serial.write(13);
+    Serial.write(10);
+    
+    Serial.print("go");
+    Serial.write(13);
+    Serial.write(10);
 }
