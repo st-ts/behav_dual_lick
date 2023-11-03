@@ -12,12 +12,18 @@ mouse_id = input('Mouse id\n:');
 freebie = 1; freebie_n = 0; freebie_max = 4; missed_till_freebie = 6; freebie_tone_prev = 0; freebie_pause = 3;
 max_wrong = 4; 
 max_tr_missed = 10;
-% if mouse_id == 63
-    port_lr_move = 1;
+
+
 % else
 %     port_lr_move = 0;
 % end
 n_trials=350; % 
+
+if mouse_id == 44
+    n_trials = 6;
+    missed_till_freebie = 2;
+    max_tr_missed = 3;
+end
 
 pre_tone_delay_dur=500; % in milliseconds
 response_dur = 2500;
@@ -27,7 +33,6 @@ reward_dur_ms = 9;
 % load('valves_calibrated.mat');
 
 % Load & set the training stage data
-punish_antic=0;
 load(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) '/reference_oscc' num2str(mouse_id) '.mat']);
 wait_increment = 0;
 
@@ -54,18 +59,6 @@ current_wait=0;
 
 choice_punish_time_out_dur = 12000;
 
-% 
-% if mouse_id > 42
-%     mouse3rew = 1;
-%      disp("3 rew alternating");
-% else
-%     mouse3rew = 0;
-%     disp("random order");
-%     choice_punish_time_out_dur =10000;
-% end
-    
-wait_punish_time_out_dur = 800;
-
 max_tone_n = 2000;
 
 %% Initializing sounds
@@ -83,43 +76,15 @@ left_tone_times = zeros(1,max_tone_n);
 right_tone_times = zeros(1,max_tone_n);
 current_waits = zeros(1,n_trials);
 trial_order = ones(1,max_tone_n)*3;
+
+
 switch_max = 5;
-alterns = [1 1 1 1 1 1 1 1 2 2 2 2 3 3 4 5];
-switch_cond = randi([1,switch_max],1,1);
+alterns = [1 1 1 1 2 2 2 2 3 3 3 4 4 5];
+switch_cond = randsample(alterns, 1);
 
 
 %% Set up raspberry pi
 rasp_init;
-% mypi = raspi('169.254.156.249', 'pi', 'raspberry');
-% 
-% % Asign and configure pins and load servos' info
-% load('reference_rasp.mat'); % file with all the pin numbers and values for servo open / close
-% 
-% configurePin(mypi,pin_sens_left,'DigitalInput');
-% configurePin(mypi,pin_sens_right,'DigitalInput');
-% configurePin(mypi,pin_valv_left,'DigitalOutput');
-% configurePin(mypi,pin_valv_right,'DigitalOutput');
-% configurePin(mypi,pin_ca_imaging,'DigitalOutput');
-% serv = servo(mypi, pin_servo_water);
-% servo_away = 90;
-% servo_near = 90;
-% writePosition(serv,servo_near);
-
-%% Stepper
-
-ardu = arduino('COM5','Uno','Libraries','Adafruit\MotorShieldV2');
-shield = addon(ardu,'Adafruit\MotorShieldV2');
-addrs = scanI2CBus(ardu,0);
-
-stepper_lr = stepper(shield,1,200);
-stepper_lr.RPM = 200;
-stepper_lr_steps = 100; % 
-stepped_left = 0; too_left = 2000; too_right = - 2000; % find out empiricaylly
-side_wrong_to_step = 4;
-
-
-
-%% 
 
 %% Variables for detecting licks
 sens_buffer_len = 10;
@@ -167,11 +132,9 @@ GO_CUE = 3;
 REWARD = 4;
 PRE_TONE_DELAY = 5;
 RESPONSE_CUE = 6;
-WAIT_PUNISHMENT_TIME_OUT = 7;
 CHOICE_PUNISHMENT_TIME_OUT = 8;
 FIRST_TRIAL = 9;
 REWARD_INTAKE = 10;
-WORKING_MEMORY = 11;
 state=FIRST_TRIAL;
 
 % Reward-related
@@ -182,7 +145,7 @@ cond_count=0;
 
 %% Ask about training info
 weight = input(['Mouse ' num2str(mouse_id) ' weight \n:']);
-pre_note = input("Anything special before the experiment? \n:");
+pre_note = input("Anything special before the experiment? \n:", "s");
 
 
 %% Start the task
@@ -192,7 +155,7 @@ disp(['starting the task, time: ' datestr(now,'dd-mm-yyyy HH:MM:SS.FFF')]);
 training_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
 train_t_max = 80; too_long = 0;
-writeDigitalPin(mypi,pin_ca_imaging,1);
+% writeDigitalPin(mypi,pin_ca_imaging,1);
 pre_tone_delay_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
 % Figure setup
@@ -275,28 +238,30 @@ scr_detect_lick;
 
             state=TONE;
             tone_n=tone_n+1;
-            % current_cond=randsample([left right],1);
+
             if  reward_alt == 1
                 if cond_count >= switch_cond
-                    switch_cond = randi([1,switch_max],1,1);
+                    switch_cond = randsample(alterns, 1);
                     current_cond=-current_cond;
                     cond_count=0;
                     
                 end 
             else
                     %current_cond=randsample([left right],1);
-                    current_cond=randi([1,2],1,1);
-current_cond = (current_cond-1.5)*2;
+            current_cond=randi([1,2],1,1);
+            current_cond = (current_cond-1.5)*2;
                     trial_order(tone_n) = current_cond; 
             end
             % Play the tone according to the condition
             if current_cond == left
-                PsychPortAudio('Start', pa_high, 1, 0, 0);
+%                 PsychPortAudio('Start', pa_high, 1, 0, 0);
+                send_rasp_pulse(mypi, pin_tone_left,10);
                 tone_start = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
                 left_tone_times(tone_n) = milliseconds(training_start-tone_start);
             else 
-                PsychPortAudio('Start', pa_low, 1, 0, 0);
+%                 PsychPortAudio('Start', pa_low, 1, 0, 0);
+                send_rasp_pulse(mypi, pin_tone_right,10);
                 tone_start = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
                 right_tone_times(tone_n) = milliseconds(training_start-tone_start);
@@ -328,44 +293,44 @@ current_cond = (current_cond-1.5)*2;
             right_trial_correct_nonan = right_trial_correct (~isnan(right_trial_correct));
             % Move the ports to the left / right if there are X wrong side
             %choices in a row
-            if port_lr_move && length(left_trial_correct_nonan) >= side_wrong_to_step && ...
-                    sum(left_trial_correct_nonan(end - side_wrong_to_step + 1:end))== 0 ...
-                    && stepped_left > too_right && ~missed_trials(tone_n)
-
-                if tone_n < 50
-                    move(stepper_lr, - stepper_lr_steps*3); release(stepper_lr);
-                    stepped_left = stepped_left - stepper_lr_steps*3;
-                elseif tone_n < 100
-                    move(stepper_lr, - stepper_lr_steps); release(stepper_lr);                
-                    stepped_left = stepped_left - stepper_lr_steps;
-                else
-                    move(stepper_lr, - stepper_lr_steps*0.5); release(stepper_lr);                
-                    stepped_left = stepped_left - stepper_lr_steps*0.5;
-                end
-
-                disp(['left port closer: ' num2str(stepped_left)]);
-                port_move_left(tone_n+1) = - 1;
-            end
-
-            % Same for right
-            if port_lr_move && length(right_trial_correct_nonan) >= side_wrong_to_step && ...
-                    sum(right_trial_correct_nonan(end - side_wrong_to_step + 1:end)) == 0 ...
-                    && stepped_left < too_left && ~missed_trials(tone_n)
-
-                if tone_n < 50
-                    move(stepper_lr, stepper_lr_steps*3); release(stepper_lr);
-                    stepped_left = stepped_left + stepper_lr_steps*3;
-                elseif tone_n < 100
-                    move(stepper_lr, stepper_lr_steps); release(stepper_lr);                
-                    stepped_left = stepped_left + stepper_lr_steps;
-                elseif tone_n < 200
-                    move(stepper_lr, stepper_lr_steps*0.5); release(stepper_lr);                
-                    stepped_left = stepped_left + stepper_lr_steps*0.5;
-                end
-
-                disp(['right port closer: ' num2str(stepped_left)]);
-                port_move_left(tone_n+1) = 1;
-            end
+%             if port_lr_move && length(left_trial_correct_nonan) >= side_wrong_to_step && ...
+%                     sum(left_trial_correct_nonan(end - side_wrong_to_step + 1:end))== 0 ...
+%                     && stepped_left > too_right && ~missed_trials(tone_n)
+% 
+%                 if tone_n < 50
+%                     move(stepper_lr, - stepper_lr_steps*3); release(stepper_lr);
+%                     stepped_left = stepped_left - stepper_lr_steps*3;
+%                 elseif tone_n < 100
+%                     move(stepper_lr, - stepper_lr_steps); release(stepper_lr);                
+%                     stepped_left = stepped_left - stepper_lr_steps;
+%                 else
+%                     move(stepper_lr, - stepper_lr_steps*0.5); release(stepper_lr);                
+%                     stepped_left = stepped_left - stepper_lr_steps*0.5;
+%                 end
+% 
+%                 disp(['left port closer: ' num2str(stepped_left)]);
+%                 port_move_left(tone_n+1) = - 1;
+%             end
+% 
+%             % Same for right
+%             if port_lr_move && length(right_trial_correct_nonan) >= side_wrong_to_step && ...
+%                     sum(right_trial_correct_nonan(end - side_wrong_to_step + 1:end)) == 0 ...
+%                     && stepped_left < too_left && ~missed_trials(tone_n)
+% 
+%                 if tone_n < 50
+%                     move(stepper_lr, stepper_lr_steps*3); release(stepper_lr);
+%                     stepped_left = stepped_left + stepper_lr_steps*3;
+%                 elseif tone_n < 100
+%                     move(stepper_lr, stepper_lr_steps); release(stepper_lr);                
+%                     stepped_left = stepped_left + stepper_lr_steps;
+%                 elseif tone_n < 200
+%                     move(stepper_lr, stepper_lr_steps*0.5); release(stepper_lr);                
+%                     stepped_left = stepped_left + stepper_lr_steps*0.5;
+%                 end
+% 
+%                 disp(['right port closer: ' num2str(stepped_left)]);
+%                 port_move_left(tone_n+1) = 1;
+%             end
 
 
 
@@ -413,12 +378,14 @@ current_cond = (current_cond-1.5)*2;
                     trial_order(tone_n) = current_cond;  
             end
             if current_cond == left
-                PsychPortAudio('Start', pa_high, 1, 0, 0);
+                send_rasp_pulse(mypi, pin_tone_left,10);
+%                 PsychPortAudio('Start', pa_high, 1, 0, 0);
                 tone_start = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
                 left_tone_times(tone_n) = milliseconds(training_start-tone_start);
             else 
-                PsychPortAudio('Start', pa_low, 1, 0, 0);
+                send_rasp_pulse(mypi, pin_tone_right,10);
+%                 PsychPortAudio('Start', pa_low, 1, 0, 0);
                 tone_start = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
                 right_tone_times(tone_n) = milliseconds(training_start-tone_start);
@@ -444,121 +411,28 @@ current_cond = (current_cond-1.5)*2;
 %                 plot(tone_n, last_10_early_abs, 'r*');
 %                 xlim([0 tone_n+1]);
 %             end
-            if current_cond == left
-                PsychPortAudio('Stop', pa_high);
-            else
-                PsychPortAudio('Stop', pa_low);
-            end
-            state = WORKING_MEMORY;
-            working_memory_starts = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-        
-%         elseif (lick_detected_left) || (lick_detected_right)
-%             if licked_already == 0
-%                 anticip = [anticip 1];
-%                 licked_already = 1;
+%             if current_cond == left
+%                 PsychPortAudio('Stop', pa_high);
+%             else
+%                 PsychPortAudio('Stop', pa_low);
 %             end
-%             early_lick_trials_abs(tone_n) = 1;
-%             early_lick = [ early_lick milliseconds(time_now - tone_start)];
-%             if early_lick_trials_abs(10) < 3
-%                 last_10_early_abs = sum( early_lick_trials_abs(tone_n-9:tone_n) );
-%                % disp(["early lick at: " num2str( milliseconds(time_now - tone_start) )]);
-%                 plot(tone_n, last_10_early_abs,'r*');
-%                 xlim([0 tone_n+1]);
-%             end
-%             if punish_antic == 1
-% %                 PsychPortAudio('Start', pa_punish, 1, 0, 0);
-% %                 pause(0.05);
-% %                 PsychPortAudio('Stop', pa_punish);
-%                 disp('anticipatory lick during the sound');
-%                 early_lick = [ early_lick milliseconds(time_now - tone_start)];
-%                 early_lick_trials_delay(tone_n) = 1;
-% %                 if early_lick_trials_delay(10) < 3
-% %                     last_10_early_delay = sum( early_lick_trials_delay(tone_n-9:tone_n) );
-% %                    % disp(["early delay lick rate: " num2str( last_10_early_delay )]);
-% %                     plot(tone_n, last_10_early_delay, 'k*');
-% %                     xlim([0 tone_n+1]);
-% %                 end
-%                 state = WAIT_PUNISHMENT_TIME_OUT;
-%                 punish_start = datetime( datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-%                     'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-%             end
-        end
-        
-    end
-    
-    %% Period of time when a mouse needs to use working memory
-    if state==WORKING_MEMORY
-        time_now = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-        % After waiting time is over, stop it and transition to response
-        if milliseconds(time_now - working_memory_starts) >= current_wait
-            early_lick_trials_delay(tone_n) = 0;
-            if early_lick_trials_delay(10) < 3
-                last_10_early_delay = sum( early_lick_trials_delay(tone_n-9:tone_n) );
-               % disp(["early delay lick rate: " num2str( last_10_early_delay )]);
-                plot(tone_n, last_10_early_delay, 'k*');
-                xlim([0 tone_n+1]);
-            end
-            % Put servo to the mouth
-%             writePosition(serv,servo_near);
-            % Start playing go cue
-            
-            PsychPortAudio('Start', pa_go, 1, 0, 0);
+            state = RESPONSE;
             response_start = datetime( datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-            state = RESPONSE;
-            
-        elseif (lick_detected_left) || (lick_detected_right)
-%             PsychPortAudio('Start', pa_punish, 1, 0, 0);
-%             pause(0.05);
-%             PsychPortAudio('Stop', pa_punish);
-            disp('lick during working memory delay');
-%             early_lick = [ early_lick milliseconds(time_now - tone_start)];
-%             early_lick_trials_delay(tone_n) = 1;
-%             if early_lick_trials_delay(10) < 3
-%                 last_10_early_delay = sum( early_lick_trials_delay(tone_n-9:tone_n) );
-%               %  disp(["early delay lick rate: " num2str( last_10_early_delay )]);
-%                 plot(tone_n, last_10_early_delay, 'k*');
-%                 xlim([0 tone_n+1]);
-%             end
-            state = WAIT_PUNISHMENT_TIME_OUT;
-            punish_start = datetime( datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
+        
         end
         
     end
     
-    %% Punishment time out for not waiting
-    if state == WAIT_PUNISHMENT_TIME_OUT
-        if lick_detected_left || lick_detected_right
-%             PsychPortAudio('Start', pa_punish, 1, 0, 0);
-%             pause(0.05);
-%             PsychPortAudio('Stop', pa_punish);
-%             writePosition(serv,servo_away);
-            state = PRE_TONE_DELAY;
-            pre_tone_delay_start = datetime( datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-        end
-        
-        time_now = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-        % After punishment's time is over, stop it and transition to waiting for
-        % licks
-        if milliseconds(time_now-punish_start) >= (wait_punish_time_out_dur+randi(200))
-%             writePosition(serv,servo_away);
-            state = PRE_TONE_DELAY;
-            pre_tone_delay_start = datetime( datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-        end
-    end
+    
+    
     
     %% Waiting for licks
-    if state == RESPONSE
-        
-        %% Give reward undeservingly if the mouse made too many
+    if state == RESPONSE   
+        % Give reward undeservingly if the mouse made too many
         % discrimination errors
-        if (current_cond==left) && length(left_trial_correct_nonan ) >= max_wrong && (sum(left_trial_correct_nonan(end-max_wrong+1:end),'omitnan') == 0)
+        if (current_cond==left) && length(left_trial_correct_nonan ) >= max_wrong ...
+                && (sum(left_trial_correct_nonan(end-max_wrong+1:end),'omitnan') == 0)
             disp('undeserved reward');
             freebies_undeserved(tone_n) = 2;
             state=REWARD;
@@ -711,7 +585,7 @@ current_cond = (current_cond-1.5)*2;
 
 %             writePosition(serv,servo_away);
             state = PRE_TONE_DELAY;
-            PsychPortAudio('Stop', pa_go);
+%             PsychPortAudio('Stop', pa_go);
             pre_tone_delay_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
         end
@@ -725,7 +599,7 @@ current_cond = (current_cond-1.5)*2;
             if ((current_cond==left) && (lick_detected_left==1)) || (current_cond==right) && (lick_detected_right==1)
                 state = PRE_TONE_DELAY;
                 disp('hop');
-                PsychPortAudio('Stop', pa_go);
+%                 PsychPortAudio('Stop', pa_go);
                 pre_tone_delay_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                     'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
             end
@@ -737,7 +611,7 @@ current_cond = (current_cond-1.5)*2;
         if milliseconds(time_now-choice_punish_timeout_start)>=choice_punish_time_out_dur
 %             writePosition(serv,servo_away);
             state = PRE_TONE_DELAY;
-            PsychPortAudio('Stop', pa_go);
+%             PsychPortAudio('Stop', pa_go);
             pre_tone_delay_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
         end
@@ -786,7 +660,7 @@ current_cond = (current_cond-1.5)*2;
         end
 
         pause(2);
-        PsychPortAudio('Stop', pa_go);
+%         PsychPortAudio('Stop', pa_go);
 %         writePosition(serv,servo_away);
         state = PRE_TONE_DELAY;
         pre_tone_delay_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
@@ -814,50 +688,51 @@ sound_end;
 
 weight_after = input(['Mouse ' num2str(mouse_id) ' weight after \n:']);
 
-training_type = 'a3';
 
 
 training_end = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
 training_duration = training_end - training_start;
 
-post_note = input(["Anything special after the experiment? \n:"]);
+post_note = input(["Anything special after the experiment? \n:"], "s");
 discr=1;
-% Create the folder for the results if it deosn't exist
-if ~exist(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) ], 'dir')
-       mkdir(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) ]);
-    end
-discr=1;
+
 
 % truncate
 left_lick_times = left_lick_times(1:lick_n_L);
 right_lick_times = right_lick_times(1:lick_n_R);
 
 
-%save(['dual_lick_A3_oscc0' num2str(mouse_id) '_' datestr(now,'dd-mm-yyyy_HH-MM') '.mat'], ...
-save(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A3.mat'], ...
-    'missed_trials', 'early_lick', 'early_lick_trials_delay', 'early_lick_trials_abs', 'current_wait', ...
-    'left_trial_correct','right_trial_correct', 'training_start',...
-    'current_waits','left_lick_times','right_lick_times', 'punish_antic',...
-    'left_tone_times','right_tone_times','trial_order', 'weight', 'discr', ...
-    'pre_note', 'post_note', 'training_type', 'n', 'reward_alt', 'anticip', 'weight_after');
+% Save
+reward_alt=1;
+training_type = 'A3';
+save_behav_all;
 
-if current_wait == 2000
-    punish_antic=1;
-else
-    punish_antic=0;
-end
-
-current_stage = 3;
-save(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) '/reference_oscc' num2str(mouse_id) '.mat'], ...
-    'missed_trials', 'early_lick', 'early_lick', 'early_lick_trials_abs', 'current_wait', ...
-    'left_trial_correct','right_trial_correct', 'punish_antic', ...
-    'left_trial_correct_nonan','right_trial_correct_nonan', ...
-    'wait_increment', 'current_wait', 'reward_alt', 'current_stage',  'port_move_left');
-
-
-saveas(gcf, ['D:/dual_lick/os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A3.fig']);
-saveas(gcf, ['D:/dual_lick/os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A3.jpg']);
+% 
+% % Create the folder for the results if it deosn't exist
+% if ~exist(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) ], 'dir')
+%        mkdir(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) ]);
+% %     end
+% discr=1;
+% %save(['dual_lick_A3_oscc0' num2str(mouse_id) '_' datestr(now,'dd-mm-yyyy_HH-MM') '.mat'], ...
+% save(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A3.mat'], ...
+%     'missed_trials', 'early_lick', 'early_lick_trials_delay', 'early_lick_trials_abs', 'current_wait', ...
+%     'left_trial_correct','right_trial_correct', 'training_start',...
+%     'current_waits','left_lick_times','right_lick_times', ...
+%     'left_tone_times','right_tone_times','trial_order', 'weight', 'discr', ...
+%     'pre_note', 'post_note', 'training_type', 'n', 'reward_alt', 'anticip', 'weight_after');
+% 
+% 
+% current_stage = 3;
+% save(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) '/reference_oscc' num2str(mouse_id) '.mat'], ...
+%     'missed_trials', 'early_lick', 'early_lick', 'early_lick_trials_abs', 'current_wait', ...
+%     'left_trial_correct','right_trial_correct', ...
+%     'left_trial_correct_nonan','right_trial_correct_nonan', ...
+%     'wait_increment', 'current_wait', 'reward_alt', 'current_stage',  'port_move_left');
+% 
+% 
+% saveas(gcf, ['D:/dual_lick/os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A3.fig']);
+% saveas(gcf, ['D:/dual_lick/os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A3.jpg']);
    % 'dual_lick_A3_oscc0' num2str(mouse_id) '_' datestr(now,'dd-mm-yyyy_HH-MM') '.fig']);
 % saveas(gcf, ['dual_lick_A3_oscc0' num2str(mouse_id) '_' datestr(now,'dd-mm-yyyy_HH-MM') '.jpg']);
 
@@ -872,3 +747,7 @@ end
 disp(['training duration: ' datestr(training_duration,'HH:MM:SS.FFF')]);
 % writePosition(serv,servo_near);
 disp(['Mouse did ' num2str(n) ' trials']);
+
+
+%% Data for saving the file
+training_stage = 'A3'; 
