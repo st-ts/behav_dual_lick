@@ -4,7 +4,7 @@ pause(.164);
 %% 
 
 % Parameters for water delivery timing
-t_btw =2.8;
+t_btw = 2.8;
 reward_dur_left_ms = 9;
 reward_dur_right_ms = 9;
 
