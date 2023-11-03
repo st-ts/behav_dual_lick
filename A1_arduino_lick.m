@@ -56,7 +56,7 @@ sens_before_right = 0;
 
 %% Ask about training info
 weight = input(['Mouse ' num2str(mouse_id) ' weight \n:']);
-pre_note = input("Anything special before the experiment? \n:");
+pre_note = input("Anything special before the experiment? \n:", "s");
     
 
 % To make sure there's no sudden flash at the beginning
@@ -97,7 +97,7 @@ while n < n_trials && ~too_idle
 
             lick_detected_left=0;
 
-            send_rasp_pulse(mypi, pin_valv_left,2);
+
 
             disp(['left lick detected, cue played, reward given #' num2str(n) ]);
             
@@ -123,7 +123,6 @@ while n < n_trials && ~too_idle
 
             lick_detected_right=0;
             
-            send_rasp_pulse(mypi, pin_valv_right,2);
 
             
             disp(['right lick detected, cue played, reward given #' num2str(n) ]);
@@ -176,8 +175,11 @@ end
 %     sens_buffer(buffer_count) = readDigitalPin(a,pin_sens);
 % end
 % toc
-% Close the audio device:
-% % Play end tone & close the audio device:
+
+
+%% Play end tone & close the audio device:
+% Initializing sounds
+sound_init;
 sound_end;
 
 
@@ -188,7 +190,7 @@ training_end = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
 training_duration = training_end - training_start;
 disp(['training duration: ' datestr(training_duration,'HH:MM:SS.FFF')]);
 
-post_note = input(["Anything special after the experiment? \n:"]);
+post_note = input(["Anything special after the experiment? \n:"], "s");
 weight_after = input(['Mouse ' num2str(mouse_id) ' weight after \n:']);
 
 if ~exist(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) ], 'dir')
@@ -196,12 +198,7 @@ if ~exist(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) ], 'dir')
 end
 
 
-% Truncate
-left_rew_times = left_rew_times(1:lick_n_L);
-right_rew__times = right_rew__times(1:lick_n_R);
 
-% Save
-save(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A1.mat'], ...
-    'left_rew_times', 'right_rew__times', 'weight', 'freebie_n', ...
-    'pre_note', 'post_note', 'weight_after');
-
+%% Data for saving the file
+training_type = 'A1'; 
+save_behav_all;
