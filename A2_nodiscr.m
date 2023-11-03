@@ -18,10 +18,18 @@ close all; clear variables; format compact;
 %% Important parameters to set up
 mouse_id = input('Mouse id\n:'); 
 freebie = 1; freebie_max = 12; freebie_n = 1; max_missed_tr_fr = 5;
+if mouse_id == 77
+    max_missed_tr_fr = 3;
+end
 n_trials =350; 
+if mouse_id == 44
+    n_trials = 6;
+    max_missed_tr_fr = 2;
+end
+
 max_tries = ceil(n_trials*2); 
 imaged_trials = 100; 
-pre_tone_delay_dur=500; % in milliseconds
+pre_tone_delay_dur=1500; % in milliseconds
 
 response_dur = 2000;
 resp_dur_decr = 1;
@@ -41,8 +49,14 @@ max_missed_tr = 16;
 %     mouse3rew = 0;
 %     disp("random order");
 % else
+
+reward_alt = 1;
+switch_max = 5;
+alterns = [1 1 1 1 2 2 2 2 3 3 3 4 4 5];
+switch_cond = randsample(alterns, 1);
+
 mouse3rew = 1;
-disp("3 rew alternating");
+disp("rewards alternating");
 % end
 
 wait_punish_time_out_dur = 800;
@@ -73,19 +87,6 @@ tr = 0;
 lick_1st = 1;
 
 %% Set up raspberry pi
-% mypi = raspi('169.254.156.249', 'pi', 'raspberry');
-% 
-% % Asign and configure pins
-% load('reference_rasp.mat'); % file with all the pin numbers and values for servo open / close
-% 
-% configurePin(mypi,pin_sens_left,'DigitalInput');
-% configurePin(mypi,pin_sens_right,'DigitalInput');
-% configurePin(mypi,pin_valv_left,'DigitalOutput');
-% configurePin(mypi,pin_valv_right,'DigitalOutput');
-% configurePin(mypi,pin_ca_imaging,'DigitalOutput');
-% serv = servo(mypi, pin_servo_water);
-
-%writePosition(serv,port_near);
 rasp_init();
 
 %% Stepper
@@ -155,7 +156,7 @@ cond_count=0;
 
 %% Ask about training info
 weight = input(['Mouse ' num2str(mouse_id) ' weight \n:']);
-pre_note = input("Anything special before the experiment? \n:");
+pre_note = input("Anything special before the experiment? \n:", "s");
 
 
 %% Start the task
@@ -168,6 +169,9 @@ training_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
 % writeDigitalPin(mypi,pin_ca_imaging,1);
 pre_tone_delay_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
+% Figure setup
+set(0,'DefaultFigureWindowStyle','docked')
+
 figure(1); hold on; ylim([-0.2 11])
 
 plot(1, 1,'ro'); % missed
@@ -247,15 +251,14 @@ scr_detect_lick;
             state=TONE;
             tone_n=tone_n+1;
             % current_cond=randsample([left right],1);
-            if mouse3rew == 1
-                if cond_count >= 3
-                    current_cond=-current_cond;
-                    cond_count=0;
-                end 
-            else
-                    current_cond=randsample([left right],1);
-                    trial_order(tone_n) = current_cond; 
-            end
+
+            if cond_count >= switch_cond
+                switch_cond = randsample(alterns, 1);
+                current_cond=-current_cond;
+                cond_count=0;
+                
+            end 
+
 
 
 
@@ -336,16 +339,16 @@ scr_detect_lick;
             state=TONE;
             lick_1st = 1;
             tone_n=tone_n+1;
-            % current_cond=randsample([left right],1);
-            if  mouse3rew == 1
-                if cond_count >= 3
-                    current_cond=-current_cond;
-                    cond_count=0;
-                end 
-            else
-                    current_cond=randsample([left right],1);
-                    trial_order(tone_n) = current_cond;  
-            end
+
+
+            if cond_count >= switch_cond
+                switch_cond = randsample(alterns, 1);
+                current_cond=-current_cond;
+                cond_count=0;
+                
+            end 
+
+
             if current_cond == left
                 send_rasp_pulse(mypi, pin_tone_left,10);
 %                 PsychPortAudio('Start', pa_high, 1, 0, 0);
@@ -498,14 +501,12 @@ scr_detect_lick;
     if state == RESPONSE
         if tone_n >= max_missed_tr_fr+1 % 
             if sum(missed_trials(tone_n-max_missed_tr_fr:tone_n-1))==max_missed_tr_fr
-                if freebie == 1
-                    if freebie_n <= freebie_max
-                        disp(["freebie #" num2str(freebie_n)] );
-                        missed_trials(tone_n) = 0;
+                if freebie == 1 && freebie_n <= freebie_max
+                    disp(["freebie #" num2str(freebie_n)] );
+                    missed_trials(tone_n) = 0;
 %                         tone_n=tone_n+1;
-                        freebie_n=freebie_n+1;
-                        state=REWARD;
-                    end
+                    freebie_n=freebie_n+1;
+                    state=REWARD;
                 end
             end
         end
@@ -650,9 +651,6 @@ scr_detect_lick;
         end
 
         
-        if n>=imaged_trials
-            writeDigitalPin(mypi,pin_ca_imaging,0);
-        end
         pause(1.1);
 %         PsychPortAudio('Stop', pa_go);
 %         writePosition(serv,servo_away);
@@ -688,7 +686,11 @@ disp(['training duration: ' datestr(training_duration,'HH:MM:SS.FFF')]);
 weight_after = input(['Mouse ' num2str(mouse_id) ' weight after \n:']);
 
 
-post_note = input("Anything special after the experiment? \n:");
+post_note = input("Anything special after the experiment? \n:", "s");
+
+%% Data for saving the file
+training_stage = 'A2'; 
+
 
 % Create the folder for the results if it deosn't exist
 if ~exist(['os_data_figs/os' num2str(mouse_id) ], 'dir')
@@ -706,34 +708,30 @@ right_trial_correct = right_trial_correct(1:r_tr-1);
 left_lick_times = left_lick_times(1:lick_n_L);
 right_lick_times = right_lick_times(1:lick_n_R);
 
-% save(['dual_lick__A2_oscc0' num2str(mouse_id) '_' datestr(now,'dd-mm-yyyy_HH-MM') '.mat'], 
-save(['os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A2.mat'], ...
-    'missed_trials', 'early_lick', 'early_lick_trials_delay', 'early_lick_trials_abs', 'current_wait', ...
-    'left_trial_correct','right_trial_correct', 'training_start',...
-    'current_waits','left_lick_times','right_lick_times', 'punish_antic',...
-    'left_tone_times','right_tone_times','trial_order', 'weight', ...
-    'pre_note', 'post_note', 'n', 'mouse3rew', 'anticip', 'weight_after');
-
-if current_wait == 2000
-    punish_antic=1;
-else
-    punish_antic=0;
-end
-
+% Save
 reward_alt=1;
-current_stage = 2;
-save(['os_data_figs/os' num2str(mouse_id) '/reference_oscc' num2str(mouse_id) '.mat'], ...
-    'missed_trials', 'early_lick', 'early_lick', 'early_lick_trials_abs', 'current_wait', ...
-    'left_trial_correct','right_trial_correct', 'punish_antic', ...
-    'wait_increment', 'current_wait', 'reward_alt', 'current_stage');
+training_type = 'A2';
+save_behav_all;
+
+% % save(['dual_lick__A2_oscc0' num2str(mouse_id) '_' datestr(now,'dd-mm-yyyy_HH-MM') '.mat'], 
+% save(['os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A2.mat'], ...
+%     'missed_trials', 'early_lick', 'early_lick_trials_delay', 'early_lick_trials_abs', 'current_wait', ...
+%     'left_trial_correct','right_trial_correct', 'training_start',...
+%     'current_waits','left_lick_times','right_lick_times',...
+%     'left_tone_times','right_tone_times','trial_order', 'weight', ...
+%     'pre_note', 'post_note', 'n', 'mouse3rew', 'anticip', 'weight_after');
+% 
+% 
+% 
+% 
+% 
+% save(['os_data_figs/os' num2str(mouse_id) '/reference_oscc' num2str(mouse_id) '.mat'], ...
+%     'missed_trials', 'early_lick', 'early_lick', 'early_lick_trials_abs', 'current_wait', ...
+%     'left_trial_correct','right_trial_correct', ...
+%     'wait_increment', 'current_wait', 'reward_alt');
 
 left_trial_correct = left_trial_correct(1:find(left_trial_correct==9,1)-1);
 right_trial_correct = right_trial_correct(1:find(right_trial_correct==9,1)-1);
-
-
-saveas(gcf, ['os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A2.fig'] );
-saveas(gcf, ['os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_A2.jpg'] );
-
 
 
 correct_left = sum(left_trial_correct)/length(left_trial_correct)
@@ -752,5 +750,5 @@ end
 %     disp('no need to give grapes'); 
 % end
 
-    disp(['Mouse did ' num2str(n) ' trials']);
+    disp(['Mouse did ' num2str(n-1) ' trials']);
 %     writePosition(serv,servo_near);
