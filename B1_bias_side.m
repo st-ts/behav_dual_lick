@@ -57,15 +57,15 @@ resp_start_ts = zeros(tr_total,1);
 laser_stim_ts = zeros(tr_total,1);
 reward_ts = zeros(tr_total,1);
 
-%% Stepper
-ardu = arduino('COM5','Uno','Libraries','Adafruit\MotorShieldV2');
-shield = addon(ardu,'Adafruit\MotorShieldV2');
-addrs = scanI2CBus(ardu,0);
-
-stepper_lr = stepper(shield,1,200);
-stepper_lr.RPM = 200;
-stepper_lr_steps = 400; % Size of a step
-stepped_left = 0; too_left = 2000; too_right = - 2000; % find out empiricaylly
+% %% Stepper
+% ardu = arduino('COM5','Uno','Libraries','Adafruit\MotorShieldV2');
+% shield = addon(ardu,'Adafruit\MotorShieldV2');
+% addrs = scanI2CBus(ardu,0);
+% 
+% stepper_lr = stepper(shield,1,200);
+% stepper_lr.RPM = 200;
+% stepper_lr_steps = 400; % Size of a step
+% stepped_left = 0; too_left = 2000; too_right = - 2000; % find out empiricaylly
 
 %% Variables for detecting licks
 sens_buffer_len = 10;
@@ -122,8 +122,8 @@ while lfg
 
         elseif seq_laser(tr_current) == right
             disp('right laser');
-            writePosition(servo_las_L,servo_las_closed_L);
-            writePosition(servo_las_R,servo_las_open_R);
+            writePosition(servo_las_L, servo_las_closed_L);
+            writePosition(servo_las_R, servo_las_open_R);
         end
 
         % Move waterports to counteract the bias

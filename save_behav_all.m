@@ -17,6 +17,10 @@ if training_type == 'A1'
     'left_rew_times', 'right_rew__times', 'weight', 'freebie_n', ...
     'pre_note', 'post_note', 'weight_after');
 
+    % Save csv 
+    writematrix(right_lick_times', [ path_start  '_t_licks_R.csv']);
+    writematrix(left_lick_times',  [ path_start  '_t_licks_L.csv']);
+
 elseif training_type == 'A2' | training_type == 'A3'
     save(path_save_data, ...
     'missed_trials', 'left_trial_correct','right_trial_correct', 'training_start',...
@@ -27,14 +31,33 @@ elseif training_type == 'A2' | training_type == 'A3'
     save(path_save_ref, ...
     'missed_trials', 'left_trial_correct','right_trial_correct', 'reward_alt');
 
+    % Save the figure
     saveas(gcf, [ path_start '.jpg'] ); % save figure
-    
+
+    % Save csv 
+    results_table = table(missed_trials', left_trial_correct', right_trial_correct', ...
+                          left_tone_times,  right_tone_times', trial_order', ...
+         'VariableNames', {'missed', 'left_correct', 'right_correct', ...
+                           'left_tone_t', 'right_tone_t', 'trial_order'});
+    writetable(results_table,[ path_start  '.csv']);
+    writematrix(right_lick_times', [ path_start  '_t_licks_R.csv']);
+    writematrix(left_lick_times',  [ path_start  '_t_licks_L.csv']);
 
 elseif training_type == 'B1'
-    save(['laser_test_os' num2str(mouse_id) '_' datestr(now,'dd-mm-yyyy_HH-MM') '.mat'], ...
+    save([path_start '_lawa.mat'], ...
     't_stims', 't_port_move', ...
     'laser_stim_seq', 'water_seq',  'post_note', ...
     'left_lick_times', 'right_lick_times', ...
-    'time_imag_start');
+    'time_imag_start', 'laser_stim_param');
+
+    % Save csv 
+    results_table = table(laser_stim_seq', water_seq', t_stims', t_port_move',...
+            'VariableNames', {'laser', 'port', 't_laser', 't_port'});
+    writetable(results_table,[ path_start  '.csv']);
+    
+    writematrix(right_lick_times', [ path_start  '_t_licks_R.csv']);
+    writematrix(left_lick_times',  [ path_start  '_t_licks_L.csv']);
+
+
 
 end
