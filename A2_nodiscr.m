@@ -63,7 +63,8 @@ wait_punish_time_out_dur = 800;
 choice_punish_time_out_dur = 4000;
 max_tone_n = 2000;
 
-
+%% hmm
+training_type = 'A2';
 
 
 %% Initializing sounds
@@ -189,7 +190,7 @@ writeDigitalPin(mypi,pin_valv_left,0);
 
 
 
-give_freebies(4,3,mypi);
+give_freebies(3,3,mypi);
 
 
 left_lick_time = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
@@ -199,45 +200,6 @@ right_lick_time = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
 
 % writePosition(serv,servo_away);
 while ( n < n_trials ) && (too_many_trials_missed==0) && (tone_n<=max_tries)
-
-%for i=1:10000
-    %% Detect lick
-    % Shift values in the buffer by 1 position adding the previous reading
-    % as the last, then compare the sum of it to the new value
-    % Left
-%     for i=2:sens_buffer_len
-%         sens_buffer_left(i-1) = sens_buffer_left(i);
-%     end
-%     sens_buffer_left(sens_buffer_len) = sens_before_left;
-%     sens_now_left = readDigitalPin(mypi,pin_sens_left);
-%     if (sum(sens_buffer_left) == 0) && (sens_now_left == 1)
-%         lick_detected_left = 1;
-%         left_lick_time = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-%                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-%         lick_n_L = lick_n_L +1;
-%         left_lick_times(lick_n_L) = milliseconds(training_start-left_lick_time);
-%     else
-%         lick_detected_left = 0;
-%     end
-%     sens_before_left = sens_now_left;
-%     
-%     % Right
-%     for i=2:sens_buffer_len
-%         sens_buffer_right(i-1) = sens_buffer_right(i);
-%     end
-%     sens_buffer_right(sens_buffer_len) = sens_before_right;
-%     sens_now_right = readDigitalPin(mypi,pin_sens_right);
-%     if (sum(sens_buffer_right) == 0) && (sens_now_right == 1)
-%         lick_detected_right = 1;
-%         right_lick_time = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-%                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-%         lick_n_R = lick_n_R +1;
-%         right_lick_times(lick_n_R) = milliseconds(training_start-right_lick_time);
-%     else
-%         lick_detected_right = 0;
-%     end
-%     sens_before_right = sens_now_right;
-
 
 scr_detect_lick;
 
@@ -499,7 +461,8 @@ scr_detect_lick;
     
     %% Waiting for licks
     if state == RESPONSE
-        if tone_n >= max_missed_tr_fr+1 % 
+        if tone_n >= max_missed_tr_fr +1
+            % 
             if sum(missed_trials(tone_n-max_missed_tr_fr:tone_n-1))==max_missed_tr_fr
                 if freebie == 1 && freebie_n <= freebie_max
                     disp(["freebie #" num2str(freebie_n)] );
@@ -700,9 +663,9 @@ discr=1;
 
 % Truncate all behavioral data
 missed_trials = missed_trials(1:tone_n);
-early_lick = early_lick(1:tone_n);
-early_lick_trials_delay = early_lick_trials_delay(1:tone_n);
-early_lick_trials_abs = early_lick_trials_abs(1:tone_n);
+% early_lick = early_lick(1:tone_n);
+% early_lick_trials_delay = early_lick_trials_delay(1:tone_n);
+% early_lick_trials_abs = early_lick_trials_abs(1:tone_n);
 left_trial_correct = left_trial_correct(1:l_tr-1);
 right_trial_correct = right_trial_correct(1:r_tr-1);
 left_lick_times = left_lick_times(1:lick_n_L);
@@ -710,7 +673,7 @@ right_lick_times = right_lick_times(1:lick_n_R);
 
 % Save
 reward_alt=1;
-training_type = 'A2';
+
 save_behav_all;
 
 % % save(['dual_lick__A2_oscc0' num2str(mouse_id) '_' datestr(now,'dd-mm-yyyy_HH-MM') '.mat'], 
@@ -736,11 +699,6 @@ right_trial_correct = right_trial_correct(1:find(right_trial_correct==9,1)-1);
 
 correct_left = sum(left_trial_correct)/length(left_trial_correct)
 correct_right = sum(right_trial_correct)/length(right_trial_correct)
-
-try 
-    d=sort(early_lick);
-    median_early_lick = d( floor ( (length(early_lick_trials_delay)-sum(missed_trials))/2 ) )
-end
 
 
 % if n<(n_trials-175)

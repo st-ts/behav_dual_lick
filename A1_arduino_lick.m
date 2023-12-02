@@ -4,16 +4,16 @@
 %% Clear and close all
 close all; clear all; format compact;
 %% Important parameters to set up
-n_trials=350;
+n_trials=50;
 mouse_id = input('Mouse id\n:'); 
 
-pause_after_rew = .8; 
+pause_after_rew = 1.5; 
 
 reward_dur_ms = 5;
 
 % Freebies
 freebie_max = 20; freebie_n = 0; freebie_t = 12;
-max_idle_sec = 90;
+max_idle_sec = 60;
 
 
 % Switch
@@ -31,6 +31,8 @@ lick_n_R= 0;
 left_lick_times = [];
 right_lick_times = [];
 
+%% hmm
+training_type = 'A1'; 
 
 %% Set up raspberry pi
 rasp_init;
@@ -94,6 +96,7 @@ while n < n_trials && ~too_idle
             % play the GO sound
             send_rasp_pulse(mypi, pin_tone_go,10);
             pause(0.05);
+            send_rasp_pulse(mypi, pin_tone_go,10);
 
             lick_detected_left=0;
 
@@ -104,6 +107,7 @@ while n < n_trials && ~too_idle
             left_rew_times = [left_rew_times milliseconds(rew_t - training_start)];
             left_rewards(n)=1;
             n=n+1;
+            send_rasp_pulse(mypi, pin_valv_left,2);
 
             pause(pause_after_rew);
         end
@@ -120,7 +124,7 @@ while n < n_trials && ~too_idle
             % play the GO sound
             send_rasp_pulse(mypi, pin_tone_go,10);
             pause(0.05);
-
+send_rasp_pulse(mypi, pin_valv_right,10);
             lick_detected_right=0;
             
 
@@ -200,5 +204,5 @@ end
 
 
 %% Data for saving the file
-training_type = 'A1'; 
+
 save_behav_all;
