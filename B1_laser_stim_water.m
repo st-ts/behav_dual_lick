@@ -1,40 +1,12 @@
+% In case there is an erroneaus restart, save all the variables
+warning('off', 'raspi:utils:SaveNotSupported')
+save(['D:\dual_lick\backup\' datestr(now,'yyyy-mm-dd-_HH_MM_SS') '.mat']);
 clear variables; close all;
 
 mouse_id = input('Mouse id\n:'); 
 
 
-
-%% Set up raspberry pi
-mypi = raspi('169.254.156.249', 'pi', 'raspberry');
-
-% % Asign and configure pins
-load('reference_rasp.mat'); % file with all the pin numbers and values for servo open / close
-% pin_servo_water = 14;
-% pin_servo_laser = 25;
-% pin_sens_left = 24;
-% pin_sens_right = 23;
-% pin_valves = 18;
-% pin_laser = 21;
-% pin_ca_imaging = 26;
-% port_away = 75;
-% port_near = 90;
-% laser_blocked = 90;
-% laser_open = 180;
-
-configurePin(mypi,pin_sens_left,'DigitalInput');
-configurePin(mypi,pin_sens_right,'DigitalInput');
-configurePin(mypi,pin_valv_both,'DigitalOutput');
-configurePin(mypi,pin_ca_imaging,'DigitalOutput');
-serv_water = servo(mypi, pin_servo_water);
-serv_laser_L = servo(mypi, pin_servo_laser_L);
-serv_laser_R = servo(mypi, pin_servo_laser_R);
-
-
-% Set all the servos in a ready position
-writePosition(serv_water,port_away);
-writePosition(serv_laser_L,servo_las_closed_L);
-writePosition(serv_laser_R,servo_las_closed_R);
-
+rasp_init;
 %% idk how to name this
 laser_stim_sec = 1;
 
@@ -83,8 +55,8 @@ time_stim_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
 writeDigitalPin(mypi,pin_ca_imaging,1);
 pause(.1);
-writeDigitalPin(mypi,pin_ca_imaging,0);
-pause(3);
+writeDigitalPin(mypi,pin_ca_imaging,0); 
+% pause(3);
 
 
 %% Running the trials
@@ -95,16 +67,16 @@ time_pre_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
 t_port_move(curr_tr) = milliseconds(time_pre_start-time_imag_start);
     if water_seq(trial_order(curr_tr)) == 1
-        writePosition(serv_water,port_near);
+        writePosition(servo_water,port_near);
     else
-        writePosition(serv_water,port_away);
+        writePosition(servo_water,port_away);
     end
     if laser_stim_seq(trial_order(curr_tr)) == 1
-        writePosition(serv_laser_L,servo_las_open_L);
-        writePosition(serv_laser_R,servo_las_open_R);
+        writePosition(servo_las_L,servo_las_open_L);
+        writePosition(servo_las_R,servo_las_open_R);
     else
-        writePosition(serv_laser_L,servo_las_closed_L);
-        writePosition(serv_laser_R,servo_las_closed_R);
+        writePosition(servo_las_L,servo_las_closed_L);
+        writePosition(servo_las_R,servo_las_closed_R);
     end
 
 
@@ -201,16 +173,16 @@ while curr_tr <= tr_per_cond * n_cond
 
     elseif state == PORT_MOVE
         if water_seq(trial_order(curr_tr)) == 0
-            writePosition(serv_water,port_away);
+            writePosition(servo_water,port_away);
         else
-            writePosition(serv_water,port_near);
+            writePosition(servo_water,port_near);
         end
         if laser_stim_seq(trial_order(curr_tr)) == 1
-            writePosition(serv_laser_L,servo_las_open_L);
-            writePosition(serv_laser_R,servo_las_open_R);
+            writePosition(servo_las_L,servo_las_open_L);
+            writePosition(servo_las_R,servo_las_open_R);
         else
-            writePosition(serv_laser_L,servo_las_closed_L);
-            writePosition(serv_laser_R,servo_las_closed_R);
+            writePosition(servo_las_L,servo_las_closed_L);
+            writePosition(servo_las_R,servo_las_closed_R);
         end
         state = PRE_STIM;
     end
@@ -228,5 +200,5 @@ save(['laser_test_os' num2str(mouse_id) '_' datestr(now,'dd-mm-yyyy_HH-MM') '.ma
     'laser_stim_seq', 'water_seq',  'post_note', ...
     'left_lick_times', 'right_lick_times', ...
     'time_imag_start');
-writePosition(serv_water,port_near);
+writePosition(servo_water,port_near);
 

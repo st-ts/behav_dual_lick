@@ -1,11 +1,14 @@
+
 %% % Flush valves
 % Since after some time withut use some air accumulates in the valves,
 % Before running the training/experiments, valves need to be flushed 
-
+% In case there is an erroneaus restart, save all the variables
+warning('off', 'raspi:utils:SaveNotSupported')
+save(['D:\dual_lick\backup\' datestr(now,'yyyy-mm-dd-_HH_MM_SS') '.mat']);
 clear variables; close all;
 % Set the time of flushing the valves; typical value for the 1 day of not 
-% used is 25 seconds
-dur_flush = 25;
+% used is 33 seconds
+dur_flush = 33; 3;
 
 pause_dur = 0.4;
 
@@ -29,7 +32,3 @@ for i = 1:dur_flush
      
 end
 toc
-
-
-
-

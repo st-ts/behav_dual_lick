@@ -2,6 +2,9 @@
 % 3rd stage of training
 % After licking any port, go cue sounds and water is provided
 
+% In case there is an erroneaus restart, save all the variables
+warning('off', 'raspi:utils:SaveNotSupported')
+save(['D:\dual_lick\backup\' datestr(now,'yyyy-mm-dd-_HH_MM_SS') '.mat']);
 %% Clear and close all
 close all; clear all; format compact;
 
@@ -23,7 +26,13 @@ if mouse_id == 44
     n_trials = 6;
     missed_till_freebie = 2;
     max_tr_missed = 3;
+elseif mouse_id == 77
+    reward_alt = 1;
 end
+
+%% hmm
+training_type = 'A3';
+
 
 pre_tone_delay_dur=500; % in milliseconds
 response_dur = 2500;
@@ -705,7 +714,7 @@ right_lick_times = right_lick_times(1:lick_n_R);
 
 % Save
 reward_alt=1;
-training_type = 'A3';
+
 save_behav_all;
 
 % 

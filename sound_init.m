@@ -58,7 +58,7 @@ device = devices(deviceRow).DeviceIndex;
     % Create virtual cards
 %     pamaster = PsychPortAudio('Open', 6, 9, 0, freq_go, nrchannels);
 % pamaster = PsychPortAudio('Open', 6);
-pamaster = PsychPortAudio('Open', 7, 9, 1);
+pamaster = PsychPortAudio('Open', device, 9); %, 9, 0);
     pa_go = PsychPortAudio('OpenSlave', pamaster);
     pa_low = PsychPortAudio('OpenSlave', pamaster);
     pa_high = PsychPortAudio('OpenSlave', pamaster);

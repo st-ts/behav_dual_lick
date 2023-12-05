@@ -3,15 +3,17 @@
 % This modification has forced alternating choice between the sides, i. e.
 % the mouse has to get a reward from a certain port before it can get the
 % next one. Need to explain better
-
+% In case there is an erroneaus restart, save all the variables
+warning('off', 'raspi:utils:SaveNotSupported')
+save(['D:\dual_lick\backup\' datestr(now,'yyyy-mm-dd-_HH_MM_SS') '.mat']);
 clear variables; close all;
 
 mouse_id = input('Mouse id\n:'); 
-laser_intensity = input('Laser intensity:\n');
-laser_duration = input('Laser duration:\n');
+laser_intensity = 30; % input('Laser intensity:\n');
+laser_duration = 6; % input('Laser duration:\n');
 weight = input(['Mouse ' num2str(mouse_id) ' weight \n:']);
 
-tr_per_cond = 60; % total number will be x8
+tr_per_cond = 50; % total number will be x8
 
 %% Set up raspberry pi
 rasp_init;
@@ -20,7 +22,7 @@ rasp_init;
 give_freebies(3, 3, mypi);
 %% Sequence of stimulation
 left = 1; right = -1;
-seq_laser = repmat([0 0 0 0 left left right right ], 1, tr_per_cond)';
+seq_laser = repmat([0 0 0 0 0 0 0 0 0 0 0 0 left left right right ], 1, tr_per_cond)';
 seq_side = repmat([left right], 1, tr_per_cond*4)';
 tr_total = length(seq_laser);
 permut_order = randperm(tr_total);
@@ -38,7 +40,8 @@ port_move_left = zeros(tr_total,1);
 
 %% Durations of different states
 dur_pre_laser = 1000;
-dur_laser = 1500; % duration of the laser stim before the response time
+dur_laser = 1000; % duration of the laser stim before the response time
+dur_after_go = 100;
 dur_response = 1000;
 dur_post_reward = 1500;
 dur_jitter = 500;
@@ -48,6 +51,7 @@ LASER_PREP = 0;
 PRE_LASER = 1;
 LASER_STIM = 2;
 PRE_RESP = 3;
+AFTER_GO = 3.5;
 RESPONSE = 4;
 REWARD = 5;
 POST_REWARD = 6;
@@ -160,6 +164,9 @@ while lfg
 
         if milliseconds(time_now - pre_laser_start) >= dur_pre_laser + randi(dur_jitter)
             state = LASER_STIM;
+            if tr_current ~= 1
+                PsychPortAudio('Stop', pa_go);
+            end
         end
 
     elseif state == LASER_STIM
@@ -176,12 +183,23 @@ while lfg
     elseif state == PRE_RESP
         time_now = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-        if milliseconds(time_now - laser_t) >= dur_laser + randi(dur_jitter)
+        if milliseconds(time_now - laser_t) >= dur_laser 
+            state = AFTER_GO;
+        time_go = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
+                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
+            PsychPortAudio('Start', pa_go, 1, 0, 0);
+        end
+
+    elseif state == AFTER_GO
+        time_now = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
+                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
+        if milliseconds(time_now - time_go) >= dur_after_go 
             state = RESPONSE;
             response_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
             resp_start_ts(tr_current) = milliseconds(response_start - training_start);
         end
+        
 
     elseif state == RESPONSE
         % Once the time for response runs out --> missed trial
@@ -237,10 +255,7 @@ while lfg
                 writeDigitalPin(mypi,pin_valv_left,1);
                 pause(reward_dur_ms*.001);
                 writeDigitalPin(mypi,pin_valv_left,0);
-                pause(.1);
-                writeDigitalPin(mypi,pin_valv_left,1);
-                pause(reward_dur_ms*.001);
-                writeDigitalPin(mypi,pin_valv_left,0);
+
             end
             disp(['tr #' num2str(tr_current) ', reward left']);
 
@@ -250,10 +265,6 @@ while lfg
             writeDigitalPin(mypi,pin_valv_right,0);
             if ~freebie(tr_current)
                 pause(.1);
-                writeDigitalPin(mypi,pin_valv_right,1);
-                pause(reward_dur_ms*.001);
-                writeDigitalPin(mypi,pin_valv_right,0);
-                 pause(.1);
                 writeDigitalPin(mypi,pin_valv_right,1);
                 pause(reward_dur_ms*.001);
                 writeDigitalPin(mypi,pin_valv_right,0);

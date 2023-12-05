@@ -1,10 +1,13 @@
 % For the dual lick working memory experiment
 % 1st stage of training
 % After licking any port, go cue sounds and water is provided
+% In case there is an erroneaus restart, save all the variables
+warning('off', 'raspi:utils:SaveNotSupported')
+save(['D:\dual_lick\backup\' datestr(now,'yyyy-mm-dd-_HH_MM_SS') '.mat']);
 %% Clear and close all
 close all; clear all; format compact;
 %% Important parameters to set up
-n_trials=50;
+n_trials=350;
 mouse_id = input('Mouse id\n:'); 
 
 pause_after_rew = 1.5; 

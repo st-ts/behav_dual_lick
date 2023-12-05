@@ -1,4 +1,8 @@
 %% Experiment using unilateral laser stimulation to check if it can bias 
+
+% In case there is an erroneaus restart, save all the variables
+warning('off', 'raspi:utils:SaveNotSupported')
+save(['D:\dual_lick\backup\' datestr(now,'yyyy-mm-dd-_HH_MM_SS') '.mat']);
 % the choice of the mouse between left or right water ports
 
 clear variables; close all;

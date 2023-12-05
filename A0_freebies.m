@@ -1,5 +1,7 @@
 
-drops = 5;
+
+
+drops =4;
 pause(.164);
 %% 
 

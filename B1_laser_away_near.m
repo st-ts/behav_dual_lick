@@ -1,5 +1,10 @@
-clear variables; close all;
 
+% In case there is an erroneaus restart, save all the variables
+warning('off', 'raspi:utils:SaveNotSupported')
+save(['D:\dual_lick\backup\' datestr(now,'yyyy-mm-dd-_HH_MM_SS') '.mat']);
+
+clear variables; 
+close all;
 mouse_id = input('Mouse id\n:'); 
 
 training_type = 'B1';
@@ -10,7 +15,7 @@ rasp_init;
 %% idk how to name this
 laser_stim_sec = 1;
 
-laser_stim_param = [5,45,5,30];
+laser_stim_param = [7,43,6,30];
 
 %% Variables for detecting licks
 sens_buffer_len = 10;

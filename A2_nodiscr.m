@@ -1,18 +1,12 @@
 % For the dual lick working memory experiment
 % 2nd stage of training
 % After licking any port, go cue sounds and water is provided
-%% Clear and close all
 
-% % Close the audio device:
-% PsychPortAudio('Stop', pamaster);
-% PsychPortAudio('Close', pa_go);
-% PsychPortAudio('Close', pa_low);
-% PsychPortAudio('Close', pa_high);
+% In case there is an erroneaus restart, save all the variables
+warning('off', 'raspi:utils:SaveNotSupported')
+save(['D:\dual_lick\backup\' datestr(now,'yyyy-mm-dd-_HH_MM_SS') '.mat']);
 
-% PsychPortAudio('Close', pa_end);
-% PsychPortAudio('Close', pamaster);
-% % toc
-
+% Clear and close all
 close all; clear variables; format compact;
 
 %% Important parameters to set up
@@ -126,6 +120,7 @@ early_lick_trials_delay = ones(1,max_tone_n)*3;
 missed_trials = 9*ones(1,2000); % 1 if missed, 0 otherwise
 left_trial_correct = 9*ones(1,600); l_tr = 1; % 1 if correct, 0 if right is chosen instead of left
 right_trial_correct =  9*ones(1,600); r_tr = 1; % otherwise 
+freebies = zeros(1,2000);
 choice_made = ones(1,max_tone_n)*3;
 too_many_trials_missed=0;
 
@@ -226,12 +221,14 @@ scr_detect_lick;
 
             % Play the tone according to the condition
             if current_cond == left
+                trial_order(tone_n) = 1;
                 send_rasp_pulse(mypi, pin_tone_left,10);
 %                 PsychPortAudio('Start', pa_high, 1, 0, 0);
                 tone_start = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
                 left_tone_times(tone_n) = milliseconds(training_start-tone_start);
             else 
+                trial_order(tone_n) = -1;
                 send_rasp_pulse(mypi, pin_tone_right,10);
 %                PsychPortAudio('Start', pa_low, 1, 0, 0);
                 tone_start = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
@@ -312,12 +309,14 @@ scr_detect_lick;
 
 
             if current_cond == left
+                trial_order(tone_n) = left;
                 send_rasp_pulse(mypi, pin_tone_left,10);
 %                 PsychPortAudio('Start', pa_high, 1, 0, 0);
                 tone_start = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
                 left_tone_times(tone_n) = milliseconds(training_start-tone_start);
             else 
+                trial_order(tone_n) = right;
                 send_rasp_pulse(mypi, pin_tone_right,10);
 %                 PsychPortAudio('Start', pa_low, 1, 0, 0);
                 tone_start = datetime(datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
@@ -466,6 +465,7 @@ scr_detect_lick;
             if sum(missed_trials(tone_n-max_missed_tr_fr:tone_n-1))==max_missed_tr_fr
                 if freebie == 1 && freebie_n <= freebie_max
                     disp(["freebie #" num2str(freebie_n)] );
+                    freebies(tone_n) = 1;
                     missed_trials(tone_n) = 0;
 %                         tone_n=tone_n+1;
                     freebie_n=freebie_n+1;
@@ -661,9 +661,7 @@ if ~exist(['os_data_figs/os' num2str(mouse_id) ], 'dir')
     end
 discr=1;
 
-% Truncate all behavioral data
-missed_trials = missed_trials(1:tone_n);
-% early_lick = early_lick(1:tone_n);
+
 % early_lick_trials_delay = early_lick_trials_delay(1:tone_n);
 % early_lick_trials_abs = early_lick_trials_abs(1:tone_n);
 left_trial_correct = left_trial_correct(1:l_tr-1);

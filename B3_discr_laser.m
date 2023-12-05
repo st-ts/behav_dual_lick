@@ -2,13 +2,14 @@
 % 3rd stage of training
 % After licking any port, go cue sounds and water is provided
 
-
+% In case there is an erroneaus restart, save all the variables
+save(['D:\dual_lick\backup\' datestr(now) '.mat']);
 %% Clear and close all
 close all; clear variables; format compact;
 
 %% Important parameters to set up
 mouse_id = input('Mouse id\n:'); 
-tr_per_cond_max = 30; % total n is x10, 6 conditions 
+tr_per_cond_max = 1; % total n is x10, 6 conditions 
 
 % Help the poor mousie
 freebie = 1; freebie_n = 0; freebie_max = 6; missed_till_freebie = 5;
@@ -24,10 +25,8 @@ response_dur = 1000;
 % load('valves_calibrated.mat');
 
 % Load & set the training stage data
-punish_antic=0;
-load(['os_data_figs/os' num2str(mouse_id) '/reference_oscc' num2str(mouse_id) '.mat']);
+load(['D:/dual_lick/os_data_figs/os' num2str(mouse_id) '/reference_oscc' num2str(mouse_id) '.mat']);
 
-wait_increment = 0;
 reward_dur_ms = 20;
 
 prev_correct_left = sum(left_trial_correct)/length(left_trial_correct);
@@ -456,7 +455,7 @@ while ( n < n_trials ) && (too_many_tr_missed==0) % && (tone_n <= trials_total)
         time_now = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
         % After waiting time is over, stop it and transition to response
-        if milliseconds(time_now - working_memory_starts) >= current_wait
+        if milliseconds(time_now - working_memory_starts) >= 0
             early_lick_trials_delay(tone_n) = 0;
             if early_lick_trials_delay(10) < 3
                 last_10_early_delay = sum( early_lick_trials_delay(tone_n-9:tone_n) );
@@ -701,7 +700,7 @@ while ( n < n_trials ) && (too_many_tr_missed==0) % && (tone_n <= trials_total)
     if state == REWARD
         
         n=n+1;
-        current_waits(n) = current_wait;
+
         cond_count=cond_count+1;
         if current_cond == left
            % if mouse_id == 42
@@ -716,7 +715,7 @@ while ( n < n_trials ) && (too_many_tr_missed==0) % && (tone_n <= trials_total)
             pause(reward_dur_ms*.001);
             writeDigitalPin(mypi,pin_valv_left,0);
             
-            disp(['left lick detected, current wait: ' num2str(current_wait) 'ms; trial #' num2str(n) ]); 
+            disp(['left lick reward; trial #' num2str(n) ]); 
         else
         %if mouse_id == 42  
             writeDigitalPin(mypi,pin_valv_right,1);
@@ -730,7 +729,7 @@ while ( n < n_trials ) && (too_many_tr_missed==0) % && (tone_n <= trials_total)
             pause(reward_dur_ms*.001);
             writeDigitalPin(mypi,pin_valv_right,0);
             
-            disp(['right lick detected, current wait: ' num2str(current_wait) 'ms; trial #' num2str(n) ]);  
+            disp(['right lick reward; trial #' num2str(n) ]);  
         end
         if n>=imaged_trials
             writeDigitalPin(mypi,pin_ca_imaging,0);
@@ -748,7 +747,7 @@ while ( n < n_trials ) && (too_many_tr_missed==0) % && (tone_n <= trials_total)
             
             if incr_stabil>=5
                 incr_stabil=0;
-                current_wait=current_wait+wait_increment;
+                
             end
         end
     end
@@ -795,7 +794,7 @@ free = free(1:tone_n)';
 save(['reference_oscc' num2str(mouse_id) '.mat'], 'seq_laser','seq_side', 'tone_times', 'choice_made', ...
     'missed_trials', 'free', ...
     'left_trial_correct','right_trial_correct', 'punish_antic', ...
-    'wait_increment', 'current_wait', 'reward_alt', 'current_stage');
+    'current_wait', 'reward_alt', 'current_stage');
 
 
 saveas(gcf, ['os_data_figs/os' num2str(mouse_id) '/os' num2str(mouse_id) '_' datestr(now,'yy-mm-dd_HH-MM') '_B3.fig']);
