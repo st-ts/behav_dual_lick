@@ -2,7 +2,8 @@
 % 3rd stage of training
 % After licking any port, go cue sounds and water is provided
 
-
+% In case there is an erroneaus restart, save all the variables
+save(['D:\dual_lick\backup\' datestr(now) '.mat']);
 %% Clear and close all
 close all; clear variables; format compact;
 

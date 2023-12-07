@@ -34,12 +34,33 @@ elseif training_type == 'A2' | training_type == 'A3'
     % Save the figure
     saveas(gcf, [ path_start '.jpg'] ); % save figure
 
-    % Save csv 
-    results_table = table(missed_trials', left_trial_correct', right_trial_correct', ...
-                          left_tone_times,  right_tone_times', trial_order', ...
-         'VariableNames', {'missed', 'left_correct', 'right_correct', ...
-                           'left_tone_t', 'right_tone_t', 'trial_order'});
-    writetable(results_table,[ path_start  '.csv']);
+    % Truncate all behavioral data
+    missed_trials = missed_trials(1:tone_n);
+    trial_order = trial_order(1:tone_n);
+
+    % Make data the same length
+%     if tone_n ~= length(left_trial_correct) || tone_n ~= length(right_trial_correct)
+%         temp_left_trial_correct = NaN(tone_n,1); temp_right_trial_correct = NaN(tone_n,1);
+%         tr_L = 1; tr_R = 1;
+%         for n = 1:tone_n
+%             if trial_order(n) == 1
+%                 temp_left_trial_correct(n) = left_trial_correct(tr_L);
+%                 tr_L = tr_L + 1;
+%             else
+%                 temp_right_trial_correct(n) = right_trial_correct(tr_R);
+%                 tr_R = tr_R + 1;
+%             end
+%         end
+%         left_trial_correct = temp_left_trial_correct;
+%         right_trial_correct = temp_right_trial_correct;
+%     end
+% 
+%     % Save csv 
+%     results_table = table(missed_trials', left_trial_correct, right_trial_correct, ...
+%                           left_tone_times',  right_tone_times', trial_order', ...
+%          'VariableNames', {'missed', 'left_correct', 'right_correct', ...
+%                            'left_tone_t', 'right_tone_t', 'trial_order'});
+%     writetable(results_table,[ path_start  '.csv']);
     writematrix(right_lick_times', [ path_start  '_t_licks_R.csv']);
     writematrix(left_lick_times',  [ path_start  '_t_licks_L.csv']);
 
@@ -55,6 +76,28 @@ elseif training_type == 'B1'
             'VariableNames', {'laser', 'port', 't_laser', 't_port'});
     writetable(results_table,[ path_start  '.csv']);
     
+    writematrix(right_lick_times', [ path_start  '_t_licks_R.csv']);
+    writematrix(left_lick_times',  [ path_start  '_t_licks_L.csv']);
+
+elseif training_type == 'B2'
+    save([path_start '_B2.mat'], ...
+    'laser_intensity', 'laser_duration', 'training_start',...
+    'left_lick_times','right_lick_times', 'weight');
+
+
+    % Make table with results
+    results_table = table(missed_trials, seq_laser, seq_side, choice, freebie, ...
+                      resp_start_ts, reward_ts, laser_stim_ts,...
+   'VariableNames', {'missed', 'laser', 'side', 'choice', 'free', ...
+                     'resp_start_ts', 'reward_ts', 'laser_stim_ts' ...
+                    });
+
+    % Tuncate the lick data
+    right_lick_times = right_lick_times(1:lick_n_R);
+    left_lick_times = left_lick_times(1:lick_n_L);
+
+
+    writetable(results_table, [ path_start  '.csv']);
     writematrix(right_lick_times', [ path_start  '_t_licks_R.csv']);
     writematrix(left_lick_times',  [ path_start  '_t_licks_L.csv']);
 

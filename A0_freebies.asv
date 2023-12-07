@@ -1,7 +1,5 @@
 
-
-
-drops =4;
+drops = 5;
 pause(.164);
 %% 
 
@@ -15,26 +13,24 @@ pin_valve_l = 18; %
 pin_valve_r = 15; % 
 
 % Initialize rasp
-%% Set up raspberry pi
-rasp_init;
-% try
-%     mypi = raspi('169.254.156.249', 'pi', 'raspberry');
-% end
+try
+    mypi = raspi('169.254.156.249', 'pi', 'raspberry');
+end
 
-% % Asign and configure pins
-% pin_servo = 14;
-% pin_sens_left = 24;
-% pin_sens_right = 23;
-% pin_valv_left = 18;
-% pin_valv_right = 15;
-% pin_ca_imaging = 26;
-% pin_siren_on = 21; 
-% configurePin(mypi,pin_siren_on,'DigitalOutput');
-% configurePin(mypi,pin_sens_left,'DigitalInput');
-% configurePin(mypi,pin_sens_right,'DigitalInput');
-% configurePin(mypi,pin_valv_left,'DigitalOutput');
-% configurePin(mypi,pin_valv_right,'DigitalOutput');
-% configurePin(mypi,pin_ca_imaging,'DigitalOutput');
+% Asign and configure pins
+pin_servo = 14;
+pin_sens_left = 24;
+pin_sens_right = 23;
+pin_valv_left = 18;
+pin_valv_right = 15;
+pin_ca_imaging = 26;
+pin_siren_on = 21; 
+configurePin(mypi,pin_siren_on,'DigitalOutput');
+configurePin(mypi,pin_sens_left,'DigitalInput');
+configurePin(mypi,pin_sens_right,'DigitalInput');
+configurePin(mypi,pin_valv_left,'DigitalOutput');
+configurePin(mypi,pin_valv_right,'DigitalOutput');
+configurePin(mypi,pin_ca_imaging,'DigitalOutput');
 
 %configurePin(mypi,pin_valve_r,'DigitalOutput');
 % for i=1:6
@@ -42,7 +38,6 @@ rasp_init;
 %     writeDigitalPin(mypi,pin_siren_on,1);
 %     pause(3);
 %     disp('siren off');
-
 %     writeDigitalPin(mypi,pin_siren_on,0);
 %     pause(3);
 % end

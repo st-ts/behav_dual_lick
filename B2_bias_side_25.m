@@ -3,24 +3,26 @@
 % This modification has forced alternating choice between the sides, i. e.
 % the mouse has to get a reward from a certain port before it can get the
 % next one. Need to explain better
-
-clear variables; close all;
-
+% In case there is an erroneaus restart, save all the variables
+warning('off', 'raspi:utils:SaveNotSupported')
+save(['D:\dual_lick\backup\' datestr(now,'yyyy-mm-dd-_HH_MM_SS') '.mat']);
+% clear variables; 
+close all;
 mouse_id = input('Mouse id\n:'); 
-laser_intensity = input('Laser intensity:\n');
-laser_duration = input('Laser duration:\n');
+laser_intensity = 30; % input('Laser intensity:\n');
+laser_duration = 8; % input('Laser duration:\n');
 weight = input(['Mouse ' num2str(mouse_id) ' weight \n:']);
 
-tr_per_cond = 60; % total number will be x8
-
+tr_per_cond = 50; 50; % total number will be x8
+training_type = 'B2';
 %% Set up raspberry pi
 rasp_init;
 
 %
-give_freebies(3, 3, mypi);
+
 %% Sequence of stimulation
 left = 1; right = -1;
-seq_laser = repmat([0 0 0 0 left left right right ], 1, tr_per_cond)';
+seq_laser = repmat([zeros(1,4) left left right right ], 1, tr_per_cond)';
 seq_side = repmat([left right], 1, tr_per_cond*4)';
 tr_total = length(seq_laser);
 permut_order = randperm(tr_total);
@@ -37,22 +39,26 @@ freebie = zeros(tr_total,1);
 port_move_left = zeros(tr_total,1);
 
 %% Durations of different states
-dur_pre_laser = 1000;
-dur_laser = 2000; % duration of the laser stim before the response time
+dur_pre_laser = 2000;
+dur_laser = 200; % duration of the laser stim before the response time
+dur_after_go = 100;
 dur_response = 1000;
-dur_post_reward = 2500;
-dur_jitter = 1000;
+dur_post_reward = 1500;
+dur_jitter = 500;
 
 %% State variables
 LASER_PREP = 0;
 PRE_LASER = 1;
 LASER_STIM = 2;
 PRE_RESP = 3;
+AFTER_GO = 3.5;
 RESPONSE = 4;
 REWARD = 5;
 POST_REWARD = 6;
 
 state = LASER_PREP;
+
+
 
 %% Time logging related variables
 left_lick_times = zeros(10000,1); 
@@ -64,16 +70,6 @@ port_move_ts = zeros(tr_total,1);
 resp_start_ts = zeros(tr_total,1);
 laser_stim_ts = zeros(tr_total,1);
 reward_ts = zeros(tr_total,1);
-
-%% Stepper
-ardu = arduino('COM5','Uno','Libraries','Adafruit\MotorShieldV2');
-shield = addon(ardu,'Adafruit\MotorShieldV2');
-addrs = scanI2CBus(ardu,0);
-
-stepper_lr = stepper(shield,1,200);
-stepper_lr.RPM = 200;
-stepper_lr_steps = 400; % Size of a step
-stepped_left = 0; too_left = 2000; too_right = - 2000; % find out empiricaylly
 
 %% Variables for detecting licks
 sens_buffer_len = 10;
@@ -96,12 +92,17 @@ tr_current = 0;
 tr_side = 1;
 disp(['starting the task, time: ' datestr(now,'dd-mm-yyyy HH:MM:SS.FFF')]);
 % Start the task
+% training_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
+%                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
+
+time_stim_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
+                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
 training_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-
-
+pin_ca_imaging = 21; %%
+send_rasp_pulse(mypi, pin_ca_imaging, 500);
 lfg = true;
-
+%give_freebies(2, 3, mypi);
 %% Run behavioral loop
 while lfg
 
@@ -157,6 +158,9 @@ while lfg
 
         if milliseconds(time_now - pre_laser_start) >= dur_pre_laser + randi(dur_jitter)
             state = LASER_STIM;
+%             if tr_current ~= 1
+%                 PsychPortAudio('Stop', pa_go);
+%             end
         end
 
     elseif state == LASER_STIM
@@ -173,29 +177,51 @@ while lfg
     elseif state == PRE_RESP
         time_now = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-        if milliseconds(time_now - laser_t) >= dur_laser + randi(dur_jitter)
+        if milliseconds(time_now - laser_t) >= dur_laser 
+            state = AFTER_GO;
+        time_go = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
+                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
+        send_rasp_pulse(mypi, pin_tone_go, 10);
+            % PsychPortAudio('Start', pa_go, 1, 0, 0);
+        end
+
+    elseif state == AFTER_GO
+        time_now = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
+                'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
+        if milliseconds(time_now - time_go) >= dur_after_go 
             state = RESPONSE;
             response_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
             resp_start_ts(tr_current) = milliseconds(response_start - training_start);
         end
+        
 
     elseif state == RESPONSE
         % Once the time for response runs out --> missed trial
         time_now = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
 
-            if lick_detected_left && seq_side(tr_side) == left
+            if lick_detected_left && seq_side(tr_current) == left
                 choice(tr_current) = left;
                 disp(['tr #' num2str(tr_current) ', choice: left']);
                 state=REWARD;
                 
 
-            elseif lick_detected_right && seq_side(tr_side) == right
+            elseif lick_detected_right && seq_side(tr_current) == right
                 choice(tr_current) = right;
                 disp(['tr #' num2str(tr_current) ', choice: right']);
                 state=REWARD;
-                 
+            
+%             elseif lick_detected_right && seq_side(tr_current) == left
+%                 choice(tr_current) = right;
+%                 disp(['tr #' num2str(tr_current) ', wrong choice: right']);
+%                 state=LASER_PREP;
+% 
+%             elseif lick_detected_left && seq_side(tr_current) == right
+%                 choice(tr_current) = left;
+%                 disp(['tr #' num2str(tr_current) ', wrong choice: left']);
+%                 state=LASER_PREP;
+
         
             elseif milliseconds(time_now - response_start) >= dur_response 
                 state = LASER_PREP;
@@ -206,13 +232,14 @@ while lfg
                     sum(missed_trials(tr_current-max_missed+1:tr_current)) >= max_missed ...
                     && sum(freebie(tr_current-freebie_skip:tr_current-1)) == 0
                     freebie(tr_current) = 1;
-                    if seq_side(tr_side) == left
+                    if seq_side(tr_current) == left
                         choice(tr_current) = left;
-                    elseif seq_side(tr_side) == right
+                    elseif seq_side(tr_current) == right
                         choice(tr_current) = right;
                     end
                     disp('freebie')
                     state=REWARD;
+                end
                 
             
             end
@@ -228,24 +255,25 @@ while lfg
             writeDigitalPin(mypi,pin_valv_left,1);
             pause(reward_dur_ms*.001);
             writeDigitalPin(mypi,pin_valv_left,0);
-            if ~freebie(tr_current)
-                pause(.1);
-                writeDigitalPin(mypi,pin_valv_left,1);
-                pause(reward_dur_ms*.001);
-                writeDigitalPin(mypi,pin_valv_left,0);
-            end
+%             if ~freebie(tr_current)
+%                 pause(.1);
+%                 writeDigitalPin(mypi,pin_valv_left,1);
+%                 pause(reward_dur_ms*.001);
+%                 writeDigitalPin(mypi,pin_valv_left,0);
+
+%             end
             disp(['tr #' num2str(tr_current) ', reward left']);
 
         elseif choice(tr_current) == right 
             writeDigitalPin(mypi,pin_valv_right,1);
             pause(reward_dur_ms*.001);
             writeDigitalPin(mypi,pin_valv_right,0);
-            if ~freebie(tr_current)
-                pause(.1);
-                writeDigitalPin(mypi,pin_valv_right,1);
-                pause(reward_dur_ms*.001);
-                writeDigitalPin(mypi,pin_valv_right,0);
-            end
+%             if ~freebie(tr_current)
+%                 pause(.1);
+%                 writeDigitalPin(mypi,pin_valv_right,1);
+%                 pause(reward_dur_ms*.001);
+%                 writeDigitalPin(mypi,pin_valv_right,0);
+%             end
             disp(['tr #' num2str(tr_current) ', reward right']);
         else
             disp('wtf');
@@ -265,7 +293,10 @@ while lfg
 
 
 end
-
+%% Initializing sounds
+sound_init;
+% % Play end tone & close the audio device:
+sound_end;
 
 % Make table with results
 results_table = table(missed_trials, seq_laser, choice, freebie, resp_start_ts, ...
