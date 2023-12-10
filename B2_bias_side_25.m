@@ -100,7 +100,7 @@ time_stim_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
 training_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
 pin_ca_imaging = 21; %%
-send_rasp_pulse(mypi, pin_ca_imaging, 500);
+send_rasp_pulse(mypi, pin_ca_imaging, 5);
 lfg = true;
 %give_freebies(2, 3, mypi);
 %% Run behavioral loop
@@ -169,9 +169,7 @@ while lfg
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
         laser_stim_ts(tr_current) = milliseconds(laser_t - training_start);
         % Blast the laser for Arch
-        writeDigitalPin(mypi,pin_laser,1);
-        pause(0.02);
-        writeDigitalPin(mypi,pin_laser,0);
+        send_rasp_pulse(mypi, pin_laser, 10);
         state = PRE_RESP;
 
     elseif state == PRE_RESP
@@ -252,6 +250,7 @@ while lfg
         reward_ts (tr_current) = milliseconds(reward_t - training_start);
         
         if choice(tr_current) == left 
+            
             writeDigitalPin(mypi,pin_valv_left,1);
             pause(reward_dur_ms*.001);
             writeDigitalPin(mypi,pin_valv_left,0);

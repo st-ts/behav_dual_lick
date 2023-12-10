@@ -20,7 +20,7 @@ max_tr_missed = 10;
 % else
 %     port_lr_move = 0;
 % end
-n_trials=300; % 
+n_trials=10; % 
 
 if mouse_id == 44
     n_trials = 6;
