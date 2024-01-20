@@ -129,8 +129,6 @@ sens_before_right = 0;
 %];
 
 tone_n=0;
-early_lick_trials_abs = ones(1,max_tone_n)*3; % 1 if early lick, 0 otherwise
-early_lick_trials_delay = ones(1,max_tone_n)*3;
 missed_trials = zeros(1, max_tone_n); % 1 if missed, 0 otherwise
 choice_made = zeros(1,max_tone_n);
 freebies_undeserved = zeros(1,max_tone_n); % 1 for freebie for missed trial, 2 for underesrved choice 
@@ -148,8 +146,7 @@ licked_already = 0;
 
 
 %% Increment related variebles
-early_lick = [];
-last_10_missed=10; last_10_early_delay=10; last_10_early_abs=0;
+last_10_missed=10;
 incr_stabil = 10;
 
 %% State related variables
@@ -194,12 +191,10 @@ pre_tone_delay_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
 % Figure setup
 set(0,'DefaultFigureWindowStyle','docked')
 figure(1); hold on; ylim([-0.2 11])
-% plot(1, 1,'ro'); % early abs
-plot(1, 1,'k*'); % early
 plot(1, 1,'ro'); % missed
 plot(1, 1,'b*'); % right correct
 plot(1, 1,'g*'); % left correct
-legend( 'early', 'missed', 'correct right', 'correct left', ...
+legend('missed', 'correct right', 'correct left', ...
         'AutoUpdate', 'off', "Location", "northwest");
 set(gca,'YGrid', 'on', 'XGrid', 'off');
 % set(gcf, 'Position', [0,960,1700, 380])
@@ -695,10 +690,6 @@ save_behav_all;
 correct_left = sum(left_trial_correct_nonan, 'omitnan')/length(left_trial_correct_nonan)
 correct_right = sum(right_trial_correct_nonan, 'omitnan')/length(right_trial_correct_nonan)
 
-try 
-    d=sort(early_lick);
-    median_early_lick = d( floor ( (length(early_lick_trials_delay)-sum(missed_trials))/2 ) )
-end
 
 disp(['training duration: ' datestr(training_duration,'HH:MM:SS.FFF')]);
 % writePosition(serv,servo_near);
