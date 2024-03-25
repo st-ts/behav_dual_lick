@@ -22,14 +22,24 @@ max_tr_missed = 10;
 % end
 n_trials=350; % 
 
-
+%% Variables for detecting licks
+sens_buffer_len = 10;
+lick_detected_left=0;
+lick_detected_right=0;
+sens_buffer_left = zeros(sens_buffer_len,1);
+sens_buffer_right = zeros(sens_buffer_len,1);
+sens_now_left = 0;
+sens_now_right = 0;
+sens_before_left = 0;
+sens_before_right = 0;
 
 
 %% hmm
 training_type = 'B3';
+pre_tone_delay_dur = 1000;
 
 %% Make a sequence for recording
-tr_per_cond = 20; % 4 conditions: laser x side; total_tr = tr_per_cond
+tr_per_cond = 60; % 4 conditions: laser x side; total_tr = tr_per_cond
 % Given 1/3 of trials stimulated
 total_tr = tr_per_cond*6;
 seq_laser = [zeros(tr_per_cond*4,1);  ones(tr_per_cond*2,1)];
@@ -39,8 +49,11 @@ seq_permut = randperm(total_tr);
 seq_laser = seq_laser(seq_permut);
 seq_side = seq_side(seq_permut);
 laser_ts = zeros(total_tr,1);
-recording = false;  
-rewards_before_rec = 20;
+
+
+
+        
+rewards_before_rec = 0;
 n_rec = 1;
 
 % Load & set the training stage data
@@ -84,7 +97,8 @@ max_tone_n = 2000;
 
 %% Initializing sounds
 sound_init;
-
+%% common variables
+init_common_vars;
 
 %% Time logging related variables
 left_lick_times = zeros(1,max_tone_n*7); 
@@ -165,6 +179,13 @@ training_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
 send_rasp_pulse(mypi, pin_ca_imaging, 100);
 train_t_max = 80; too_long = 0;
 
+%% start recording
+            recording=true;
+            pin_ca_imaging = 21; %%
+            recording_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
+                    'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
+            recording_start_ms = milliseconds(recording_start-training_start);
+            send_rasp_pulse(mypi, pin_ca_imaging, 5);
 % Laser parameters
 
 
@@ -351,10 +372,10 @@ scr_detect_lick;
             licked_already = 0;
             tone_n=tone_n+1;
             % current_cond=randsample([left right],1);
-            if n_rec >= total_tr
-                recording = false;
-                disp("STOP THE RECORDING");
-            end
+%             if n_rec >= total_tr
+%                 recording = false;
+%                 disp("STOP THE RECORDING");
+%             end
                
 
             if recording
@@ -633,15 +654,7 @@ scr_detect_lick;
             pre_tone_delay_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                     'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
         end
-        if (n >= rewards_before_rec) && not(recording)
 
-            recording=true;
-            pin_ca_imaging = 21; %%
-            recording_start = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
-                    'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-            recording_start_ms = milliseconds(recording_start-training_start);
-            send_rasp_pulse(mypi, pin_ca_imaging, 5);
-        end
     end
 % END IT ALL!
 end
