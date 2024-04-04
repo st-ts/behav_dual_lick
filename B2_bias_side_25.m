@@ -1,18 +1,37 @@
+% B2
 %% A version of experiment using unilateral laser stimulation to check if 
-% it can bias the choice of the mouse between left or right water ports.
+% it can bias the choice of the mouse between left or rig
+% ht water ports.
 % This modification has forced alternating choice between the sides, i. e.
 % the mouse has to get a reward from a certain port before it can get the
-% next one. Need to explain better
+% next one. 
+% Laser stimulation is applied on half trials, 25% of left and right trials
+% overall
+% Need to explain better
+% Adding some comment buffer  so that there is less risk of accidentally
+% typing somthing and disrupting the code
+%
+% wow green text
+%
+%
+%
+%
+%
+%
+%
+%
+% does anyone even read comments? ... no :) haha
+%
 % In case there is an erroneaus restart, save all the variables
 warning('off', 'raspi:utils:SaveNotSupported')
 save(['D:\dual_lick\backup\' datestr(now,'yyyy-mm-dd-_HH_MM_SS') '.mat']);
 % clear variables; 
 close all;
 mouse_id = input('Mouse id\n:'); 
-laser_intensity = 30; % input('Laser intensity:\n');
-laser_duration = 8; % input('Laser duration:\n');
+laser_intensity = 22; % input('Laser intensity:\n');
+laser_duration = [5, 45, 200]; % input('Laser duration:\n');
 weight = input(['Mouse ' num2str(mouse_id) ' weight \n:']);
-
+pre_note = input("Anything special before the experiment? \n:", "s");
 tr_per_cond = 50; 50; % total number will be x8
 training_type = 'B2';
 %% Set up raspberry pi
@@ -43,7 +62,7 @@ dur_pre_laser = 2000;
 dur_laser = 200; % duration of the laser stim before the response time
 dur_after_go = 100;
 dur_response = 1000;
-dur_post_reward = 1500;
+dur_post_reward = 2500;
 dur_jitter = 500;
 
 %% State variables
@@ -169,7 +188,7 @@ while lfg
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
         laser_stim_ts(tr_current) = milliseconds(laser_t - training_start);
         % Blast the laser for Arch
-        send_rasp_pulse(mypi, pin_laser, 10);
+        send_rasp_pulse(mypi, pin_laser, 1);
         state = PRE_RESP;
 
     elseif state == PRE_RESP
@@ -179,7 +198,7 @@ while lfg
             state = AFTER_GO;
         time_go = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
-        send_rasp_pulse(mypi, pin_tone_go, 10);
+        send_rasp_pulse(mypi, pin_tone_go, 1);
             % PsychPortAudio('Start', pa_go, 1, 0, 0);
         end
 
@@ -248,9 +267,9 @@ while lfg
         reward_t = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
         reward_ts (tr_current) = milliseconds(reward_t - training_start);
-        
+        reward_dur_ms=10;
         if choice(tr_current) == left 
-            
+%             send_rasp_pulse(mypi, pin_valv_left, 10);
             writeDigitalPin(mypi,pin_valv_left,1);
             pause(reward_dur_ms*.001);
             writeDigitalPin(mypi,pin_valv_left,0);
@@ -264,6 +283,7 @@ while lfg
             disp(['tr #' num2str(tr_current) ', reward left']);
 
         elseif choice(tr_current) == right 
+%             send_rasp_pulse(mypi, pin_valv_right, 10);
             writeDigitalPin(mypi,pin_valv_right,1);
             pause(reward_dur_ms*.001);
             writeDigitalPin(mypi,pin_valv_right,0);
@@ -322,3 +342,4 @@ training_end = datetime (datestr(now,'dd-mm-yyyy_HH:MM:SS.FFF'), ...
                 'InputFormat','dd-MM-yyyy_HH:mm:ss.SSS');
 training_duration = training_end - training_start;
 disp(['training duration: ' datestr(training_duration,'HH:MM:SS.FFF')]);
+save_behav_all;
