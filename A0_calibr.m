@@ -1,20 +1,15 @@
 % For the dual lick working memory experiment
-% 1st stage of training
-% After licking any port, go cue sounds and water is provided
+% Calibration of the valves to ensure the consistent water amounts
 % In case there is an erroneaus restart, save all the variables
 warning('off', 'raspi:utils:SaveNotSupported')
 save(['D:\dual_lick\backup\' datestr(now,'yyyy-mm-dd-_HH_MM_SS') '.mat']);
 %% Clear and close all
 close all; clear all; format compact;
 
-%% Important parameters to set up
-
+%% Calibration parameters to set up
 n_trials = 200; 
 t_inbtw = 0.1; t_rasp_pulse = 0.05;
 t_estim = n_trials * (t_rasp_pulse + t_inbtw);
-
-
-
 
 %% Set up raspberry pi
 rasp_init;
